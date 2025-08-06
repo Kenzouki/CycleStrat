@@ -61,6 +61,11 @@ export class AuthManager {
       this.handleSignUp();
     });
 
+    // Sign out button
+    document.getElementById('signoutBtn')?.addEventListener('click', () => {
+      this.handleSignOut();
+    });
+
     // Close modal on overlay click
     this.authOverlay?.addEventListener('click', (e) => {
       if (e.target === this.authOverlay) {
@@ -69,9 +74,17 @@ export class AuthManager {
     });
   }
 
-  private showAuthModal(): void {
-    if (this.authOverlay) {
-      this.authOverlay.style.display = 'flex';
+  private async showAuthModal(): Promise<void> {
+    const isSignedIn = await this.cloudStorage.isSignedIn();
+    
+    if (isSignedIn) {
+      // Show user profile instead of auth form
+      await this.showUserProfile();
+    } else {
+      // Show sign in form
+      if (this.authOverlay) {
+        this.authOverlay.style.display = 'flex';
+      }
     }
   }
 
@@ -79,6 +92,26 @@ export class AuthManager {
     if (this.authOverlay) {
       this.authOverlay.style.display = 'none';
     }
+    
+    // Reset modal to default state
+    const authTitle = document.getElementById('authTitle');
+    if (authTitle) authTitle.textContent = 'Sign In';
+    
+    // Hide all forms
+    this.hideAllForms();
+    
+    // Show default forms and info
+    const signinForm = document.getElementById('signinForm');
+    const cloudInfo = document.getElementById('cloudInfo');
+    if (signinForm) signinForm.style.display = 'block';
+    if (cloudInfo) cloudInfo.style.display = 'block';
+    
+    // Reset tabs
+    document.querySelectorAll('.auth-tab').forEach(tab => {
+      tab.classList.remove('active');
+    });
+    document.querySelector('[data-tab="signin"]')?.classList.add('active');
+    
     this.clearErrors();
   }
 
@@ -102,6 +135,89 @@ export class AuthManager {
     }
 
     this.clearErrors();
+  }
+
+  private async showUserProfile(): Promise<void> {
+    if (!this.authOverlay) return;
+
+    // Get user info
+    const user = await this.cloudStorage.getCurrentUser();
+    if (!user) return;
+
+    // Get cloud session count
+    const cloudSessions = await this.getCloudSessionCount();
+    
+    // Update modal title
+    const authTitle = document.getElementById('authTitle');
+    if (authTitle) authTitle.textContent = 'Account Details';
+
+    // Hide auth tabs and forms
+    this.hideAllForms();
+    
+    // Show user profile
+    const userProfile = document.getElementById('userProfile');
+    if (userProfile) userProfile.style.display = 'block';
+
+    // Update user email
+    const userEmail = document.getElementById('userEmail');
+    if (userEmail) userEmail.textContent = user.email || 'Unknown';
+
+    // Update session count
+    const cloudSessionCountEl = document.getElementById('cloudSessionCount');
+    if (cloudSessionCountEl) cloudSessionCountEl.textContent = cloudSessions.toString();
+
+    // Update sign in date
+    const userSignedInDate = document.getElementById('userSignedInDate');
+    if (userSignedInDate && user.last_sign_in_at) {
+      const date = new Date(user.last_sign_in_at);
+      const today = new Date();
+      const isToday = date.toDateString() === today.toDateString();
+      
+      if (isToday) {
+        userSignedInDate.textContent = 'Signed in today';
+      } else {
+        userSignedInDate.textContent = `Last signed in ${date.toLocaleDateString()}`;
+      }
+    }
+
+    // Show the modal
+    this.authOverlay.style.display = 'flex';
+  }
+
+  private hideAllForms(): void {
+    const forms = ['signinForm', 'signupForm', 'userProfile'];
+    forms.forEach(formId => {
+      const form = document.getElementById(formId);
+      if (form) form.style.display = 'none';
+    });
+
+    const cloudInfo = document.getElementById('cloudInfo');
+    if (cloudInfo) cloudInfo.style.display = 'none';
+  }
+
+  private async getCloudSessionCount(): Promise<number> {
+    try {
+      const result = await this.cloudStorage.getAllSessions();
+      return result.success && result.sessions ? result.sessions.length : 0;
+    } catch (error) {
+      return 0;
+    }
+  }
+
+  private async handleSignOut(): Promise<void> {
+    try {
+      await this.cloudStorage.signOut();
+      this.hideAuthModal();
+      this.updateUI();
+      this.showToast('Signed out successfully', 'success');
+      
+      // Refresh sessions list
+      if (this.onAuthChangeCallback) {
+        await this.onAuthChangeCallback();
+      }
+    } catch (error) {
+      this.showToast('Error signing out', 'error');
+    }
   }
 
   private async handleSignIn(): Promise<void> {

@@ -528,7 +528,37 @@
                         <button class="btn btn-primary full-width" id="signupBtn">Sign Up</button>
                     </div>
 
-                    <div class="cloud-info">
+                    <div class="auth-form" id="userProfile" style="display: none;">
+                        <div class="user-info">
+                            <div class="user-avatar">
+                                <i class="fas fa-user-circle"></i>
+                            </div>
+                            <div class="user-details">
+                                <h4 id="userEmail">user@example.com</h4>
+                                <p class="user-status">
+                                    <i class="fas fa-check-circle"></i>
+                                    <span id="userSignedInDate">Signed in today</span>
+                                </p>
+                            </div>
+                        </div>
+                        <div class="cloud-stats">
+                            <div class="cloud-stat">
+                                <i class="fas fa-database"></i>
+                                <span>
+                                    <strong id="cloudSessionCount">0</strong> sessions synced
+                                </span>
+                            </div>
+                            <div class="cloud-stat">
+                                <i class="fas fa-shield-alt"></i>
+                                <span>Data encrypted & secure</span>
+                            </div>
+                        </div>
+                        <button class="btn btn-danger full-width" id="signoutBtn">
+                            <i class="fas fa-sign-out-alt"></i> Sign Out
+                        </button>
+                    </div>
+
+                    <div class="cloud-info" id="cloudInfo">
                         <p><i class="fas fa-cloud"></i> Cloud sync will save your sessions and stats online.</p>
                         <p><i class="fas fa-lock"></i> Your data is encrypted and secure.</p>
                     </div>
