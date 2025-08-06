@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Labouchere Betting System - Professional Edition</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="app-header">
+            <div class="header-content">
+                <div class="logo">
+                    <i class="fas fa-chart-line"></i>
+                    <h1>Labouchere Pro</h1>
+                </div>
+                <div class="header-stats">
+                    <div class="stat-card">
+                        <span class="stat-label">Session Time</span>
+                        <span class="stat-value" id="sessionDuration">00:00:00</span>
+                    </div>
+                    <div class="cloud-status" id="cloudStatus">
+                        <i class="fas fa-cloud-slash" title="Not connected"></i>
+                    </div>
+                    <button class="btn btn-icon" id="themeToggle" title="Toggle Dark Theme">
+                        <i class="fas fa-moon"></i>
+                    </button>
+                    <button class="btn btn-icon" id="bankrollBtn" title="Bankroll Manager">
+                        <i class="fas fa-wallet"></i>
+                    </button>
+                    <button class="btn btn-icon" id="authBtn" title="Sign In" style="display: none;">
+                        <i class="fas fa-user"></i>
+                    </button>
+                    <button class="btn btn-icon header-settings" id="openSettings" title="Settings">
+                        <i class="fas fa-cog"></i>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Session Setup Panel -->
+            <section class="panel session-panel">
+                <div class="panel-header">
+                    <h2><i class="fas fa-cog"></i> Session Configuration</h2>
+                    <div class="panel-actions">
+                        <button class="btn btn-icon" id="collapseSetup">
+                            <i class="fas fa-chevron-up"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="panel-content" id="setupContent">
+                    <!-- Session Management -->
+                    <div class="config-section">
+                        <h3>Session Management</h3>
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label for="sessionName">Session Name</label>
+                                <input type="text" id="sessionName" placeholder="My Casino Session">
+                            </div>
+                            <div class="form-group">
+                                <label for="casinoName">Casino</label>
+                                <input type="text" id="casinoName" placeholder="Enter casino name">
+                            </div>
+                            <div class="form-group">
+                                <label for="gameType">Game Type</label>
+                                <select id="gameType">
+                                    <option value="roulette">Roulette</option>
+                                    <option value="baccarat">Baccarat</option>
+                                    <option value="blackjack">Blackjack</option>
+                                    <option value="craps">Craps</option>
+                                    <option value="other">Other</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="savedSessions">Load Session</label>
+                                <select id="savedSessions">
+                                    <option value="">Select a saved session...</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="button-group">
+                            <button class="btn btn-secondary" id="newSession">
+                                <i class="fas fa-plus"></i> New Session
+                            </button>
+                            <button class="btn btn-secondary" id="loadSession" disabled>
+                                <i class="fas fa-folder-open"></i> Load Session
+                            </button>
+                            <button class="btn btn-danger" id="deleteSession" disabled>
+                                <i class="fas fa-trash"></i> Delete Session
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Betting Configuration -->
+                    <div class="config-section">
+                        <h3>Betting Configuration</h3>
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label for="selectedPot">Select Gaming Pot (Optional)</label>
+                                <select id="selectedPot" class="form-control">
+                                    <option value="">Manual Bankroll Entry</option>
+                                </select>
+                                <small class="help-text">Choose a pot from Bankroll Manager or enter manually below</small>
+                            </div>
+                            <div class="form-group">
+                                <label for="startingBankroll">Starting Bankroll ($)</label>
+                                <input type="number" id="startingBankroll" value="1000" min="1" step="0.01">
+                            </div>
+                            <div class="form-group">
+                                <label for="profitGoal">Profit Goal ($)</label>
+                                <input type="number" id="profitGoal" value="100" min="1" step="0.01">
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="useProfitPercentage">
+                                    Use percentage
+                                </label>
+                                <input type="number" id="profitPercentage" value="10" min="0.1" step="0.1" disabled>
+                            </div>
+                            <div class="form-group">
+                                <label for="stopLoss">Stop Loss ($)</label>
+                                <input type="number" id="stopLoss" value="50" min="1" step="0.01">
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="useStopLossPercentage">
+                                    Use percentage
+                                </label>
+                                <input type="number" id="stopLossPercentage" value="5" min="0.1" step="0.1" disabled>
+                            </div>
+                            <div class="form-group">
+                                <label for="minimumBet">Minimum Bet ($)</label>
+                                <input type="number" id="minimumBet" value="0.25" min="0.01" step="0.01">
+                            </div>
+                            <div class="form-group">
+                                <label for="numberOfCycles">Number of Cycles</label>
+                                <input type="number" id="numberOfCycles" value="1" min="1" step="1">
+                            </div>
+                        </div>
+
+                        <!-- Even Money Checkbox -->
+                        <div class="form-group">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="evenMoney" checked>
+                                Even Money Bets (1:1 payout)
+                            </label>
+                        </div>
+
+                        <!-- Risk/Reward Multiplier (for non-even money bets) -->
+                        <div class="form-group" id="riskRewardGroup" style="display: none;">
+                            <label for="riskRewardMultiplier">Risk/Reward Multiplier</label>
+                            <input type="number" id="riskRewardMultiplier" value="0.5" min="0.01" step="0.01">
+                            <small class="form-hint" id="betTypeInfo">0.5 = dozens/columns (2:1 odds), 2 = single numbers (35:1 odds)</small>
+                        </div>
+
+                        <div class="button-group">
+                            <button class="btn btn-primary btn-large" id="startSession">
+                                <i class="fas fa-play"></i> Start Session
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Session Status Panel -->
+            <section class="panel status-panel" id="statusPanel" style="display: none;">
+                <div class="panel-header">
+                    <h2><i class="fas fa-tachometer-alt"></i> Session Status</h2>
+                    <div class="panel-actions">
+                        <button class="btn btn-icon" id="pauseSession">
+                            <i class="fas fa-pause"></i>
+                        </button>
+                        <button class="btn btn-icon" id="saveSession">
+                            <i class="fas fa-save"></i>
+                        </button>
+                        <button class="btn btn-icon" id="exportStats">
+                            <i class="fas fa-download"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="panel-content">
+                    <div class="status-grid">
+                        <div class="status-card balance">
+                            <div class="status-icon">
+                                <i class="fas fa-wallet"></i>
+                            </div>
+                            <div class="status-info">
+                                <span class="status-label">Current Balance</span>
+                                <span class="status-value" id="currentBalance">$0</span>
+                            </div>
+                        </div>
+                        <div class="status-card profit">
+                            <div class="status-icon">
+                                <i class="fas fa-chart-line"></i>
+                            </div>
+                            <div class="status-info">
+                                <span class="status-label">Cycle Profit</span>
+                                <span class="status-value" id="cycleProfit">$0</span>
+                            </div>
+                        </div>
+                        <div class="status-card cycle">
+                            <div class="status-icon">
+                                <i class="fas fa-sync-alt"></i>
+                            </div>
+                            <div class="status-info">
+                                <span class="status-label">Current Cycle</span>
+                                <span class="status-value" id="currentCycle">1</span>
+                            </div>
+                        </div>
+                        <div class="status-card total">
+                            <div class="status-icon">
+                                <i class="fas fa-trophy"></i>
+                            </div>
+                            <div class="status-info">
+                                <span class="status-label">Total Profit</span>
+                                <span class="status-value" id="totalProfit">$0</span>
+                            </div>
+                        </div>
+                        <div class="status-card wagered">
+                            <div class="status-icon">
+                                <i class="fas fa-coins"></i>
+                            </div>
+                            <div class="status-info">
+                                <span class="status-label">Total Wagered</span>
+                                <span class="status-value" id="totalWagered">$0</span>
+                            </div>
+                        </div>
+                        <div class="status-card risk">
+                            <div class="status-icon">
+                                <i class="fas fa-shield-alt"></i>
+                            </div>
+                            <div class="status-info">
+                                <span class="status-label">Risk Remaining</span>
+                                <span class="status-value" id="riskRemaining">$0</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Risk Warning -->
+                    <div class="risk-warning" id="riskWarning" style="display: none;">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <span id="riskWarningText"></span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Betting Panel -->
+            <section class="panel betting-panel" id="bettingPanel" style="display: none;">
+                <div class="panel-header">
+                    <h2><i class="fas fa-dice"></i> Place Your Bet</h2>
+                </div>
+                <div class="panel-content">
+                    <div class="bet-info">
+                        <div class="bet-amount">
+                            <span class="bet-label">Next Bet Size</span>
+                            <span class="bet-value" id="nextBetSize">$0</span>
+                        </div>
+                        <div class="desired-profit">
+                            <span class="profit-label">Desired Profit</span>
+                            <span class="profit-value" id="desiredProfit">$0</span>
+                        </div>
+                    </div>
+                    <div class="betting-actions">
+                        <button class="btn btn-success btn-large" id="betWin">
+                            <i class="fas fa-check-circle"></i>
+                            Win
+                        </button>
+                        <button class="btn btn-danger btn-large" id="betLoss">
+                            <i class="fas fa-times-circle"></i>
+                            Loss
+                        </button>
+                        <button class="btn btn-warning" id="splitEntry">
+                            <i class="fas fa-cut"></i>
+                            Split Last Entry
+                        </button>
+                    </div>
+                    
+                    <!-- Copy to Clipboard Option -->
+                    <div class="betting-options">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="copyToClipboard" checked>
+                            Auto-copy bet size to clipboard
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="autoSave" checked>
+                            Auto-save after each bet
+                        </label>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Sequence Display Panel -->
+            <section class="panel sequence-panel" id="sequencePanel" style="display: none;">
+                <div class="panel-header">
+                    <h2><i class="fas fa-list-ol"></i> Cycle Sequences</h2>
+                </div>
+                <div class="panel-content">
+                    <div class="sequence-container" id="sequenceContainer">
+                        <!-- Sequences will be dynamically generated here -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- Live Stats Panel -->
+            <section class="panel live-stats-panel" id="liveStatsPanel" style="display: none;">
+                <div class="panel-header">
+                    <h2><i class="fas fa-chart-area"></i> Live Stats</h2>
+                    <div class="panel-actions">
+                        <button class="btn btn-icon" id="refreshStats">
+                            <i class="fas fa-sync"></i>
+                        </button>
+                        <button class="btn btn-icon" id="collapseLiveStats">
+                            <i class="fas fa-chevron-up"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="panel-content" id="liveStatsContent">
+                    <div class="live-stats-grid">
+                        <div class="live-stat-card profit">
+                            <div class="live-stat-label">Profit</div>
+                            <div class="live-stat-value" id="liveProfit">$0.00</div>
+                        </div>
+                        <div class="live-stat-card wins">
+                            <div class="live-stat-label">Wins</div>
+                            <div class="live-stat-value" id="liveWins">0</div>
+                        </div>
+                        <div class="live-stat-card wagered">
+                            <div class="live-stat-label">Wagered</div>
+                            <div class="live-stat-value" id="liveWagered">$0.00</div>
+                        </div>
+                        <div class="live-stat-card losses">
+                            <div class="live-stat-label">Losses</div>
+                            <div class="live-stat-value" id="liveLosses">0</div>
+                        </div>
+                        <div class="live-stat-card win-rate">
+                            <div class="live-stat-label">Win Rate</div>
+                            <div class="live-stat-value" id="liveWinRate">0%</div>
+                        </div>
+                        <div class="live-stat-card consecutive">
+                            <div class="live-stat-label">Current Streak</div>
+                            <div class="live-stat-value" id="currentStreak">-</div>
+                        </div>
+                        <div class="live-stat-card max-consecutive">
+                            <div class="live-stat-label">Max Wins</div>
+                            <div class="live-stat-value" id="maxWins">0</div>
+                        </div>
+                        <div class="live-stat-card max-consecutive">
+                            <div class="live-stat-label">Max Losses</div>
+                            <div class="live-stat-value" id="maxLosses">0</div>
+                        </div>
+                    </div>
+                    <div class="profit-chart-container">
+                        <canvas id="profitChart" width="400" height="200"></canvas>
+                    </div>
+                </div>
+            </section>
+
+            <!-- History Panel -->
+            <section class="panel history-panel" id="historyPanel" style="display: none;">
+                <div class="panel-header">
+                    <h2><i class="fas fa-history"></i> Betting History</h2>
+                    <div class="panel-actions">
+                        <button class="btn btn-icon" id="clearHistory">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                        <button class="btn btn-icon" id="undoLastBet">
+                            <i class="fas fa-undo"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="panel-content">
+                    <div class="history-table-container">
+                        <table class="history-table" id="historyTable">
+                            <thead>
+                                <tr>
+                                    <th>Bet #</th>
+                                    <th>Outcome</th>
+                                    <th>Desired Profit</th>
+                                    <th>Bet Size</th>
+                                    <th>Balance After</th>
+                                    <th>Sequence After</th>
+                                </tr>
+                            </thead>
+                            <tbody id="historyBody">
+                                <!-- History entries will be added here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+            </div>
+        </main>
+
+        <!-- Toast Notifications -->
+        <div class="toast-container" id="toastContainer">
+            <!-- Toast notifications will appear here -->
+        </div>
+
+        <!-- Confirmation Modal -->
+        <div class="modal-overlay" id="modalOverlay" style="display: none;">
+            <div class="modal">
+                <div class="modal-header">
+                    <h3 id="modalTitle">Confirm Action</h3>
+                    <button class="btn btn-icon" id="modalClose">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-content">
+                    <p id="modalMessage">Are you sure?</p>
+                </div>
+                <div class="modal-actions">
+                    <button class="btn btn-secondary" id="modalCancel">Cancel</button>
+                    <button class="btn btn-primary" id="modalConfirm">Confirm</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Settings Modal -->
+        <div class="modal-overlay" id="settingsOverlay" style="display: none;">
+            <div class="modal settings-modal">
+                <div class="modal-header">
+                    <h3>Settings</h3>
+                    <button class="btn btn-icon" id="settingsClose">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-content">
+
+                    <div class="settings-section">
+                        <h4><i class="fas fa-database"></i> Local Storage</h4>
+                        <div class="storage-info">
+                            <p><strong>Local Sessions:</strong> <span id="localSessionCount">0</span></p>
+                            <p><strong>Storage Used:</strong> <span id="localStorageSize">0 KB</span></p>
+                        </div>
+                        <div class="button-group">
+                            <button class="btn btn-secondary" id="exportAllLocal">
+                                <i class="fas fa-download"></i> Export All Sessions
+                            </button>
+                            <button class="btn btn-warning" id="clearAllLocal">
+                                <i class="fas fa-trash"></i> Clear All Local Data
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-actions">
+                    <button class="btn btn-secondary" id="settingsCancel">Close</button>
+                    <button class="btn btn-primary" id="saveSettings">Save Settings</button>
+                </div>
+            </div>
+        </div>
+
+
+        <!-- Authentication Modal -->
+        <div class="modal-overlay" id="authOverlay" style="display: none;">
+            <div class="modal auth-modal">
+                <div class="modal-header">
+                    <h3 id="authTitle">Sign In</h3>
+                    <button class="btn btn-icon" id="authClose">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-content">
+                    <div class="auth-tabs">
+                        <button class="auth-tab active" data-tab="signin">Sign In</button>
+                        <button class="auth-tab" data-tab="signup">Sign Up</button>
+                    </div>
+                    
+                    <div class="auth-form" id="signinForm">
+                        <div class="form-group">
+                            <label for="signinEmail">Email</label>
+                            <input type="email" id="signinEmail" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="signinPassword">Password</label>
+                            <input type="password" id="signinPassword" class="form-control" required>
+                        </div>
+                        <div class="auth-error" id="signinError" style="display: none;"></div>
+                        <button class="btn btn-primary full-width" id="signinBtn">Sign In</button>
+                    </div>
+
+                    <div class="auth-form" id="signupForm" style="display: none;">
+                        <div class="form-group">
+                            <label for="signupEmail">Email</label>
+                            <input type="email" id="signupEmail" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="signupPassword">Password</label>
+                            <input type="password" id="signupPassword" class="form-control" required minlength="6">
+                        </div>
+                        <div class="form-group">
+                            <label for="confirmPassword">Confirm Password</label>
+                            <input type="password" id="confirmPassword" class="form-control" required minlength="6">
+                        </div>
+                        <div class="auth-error" id="signupError" style="display: none;"></div>
+                        <button class="btn btn-primary full-width" id="signupBtn">Sign Up</button>
+                    </div>
+
+                    <div class="cloud-info">
+                        <p><i class="fas fa-cloud"></i> Cloud sync will save your sessions and stats online.</p>
+                        <p><i class="fas fa-lock"></i> Your data is encrypted and secure.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bankroll Manager Modal -->
+        <div class="modal-overlay" id="bankrollOverlay" style="display: none;">
+            <div class="modal bankroll-modal">
+                <div class="modal-header">
+                    <h3><i class="fas fa-wallet"></i> Bankroll Manager</h3>
+                    <button class="btn btn-icon" id="bankrollClose">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-content">
+                    <!-- No Bankroll State -->
+                    <div id="noBankroll" style="display: none;">
+                        <div class="empty-state">
+                            <i class="fas fa-wallet empty-icon"></i>
+                            <h4>No Bankroll Created</h4>
+                            <p>Create and manage your gambling bankroll with multiple pots for different games and purposes.</p>
+                            <button class="btn btn-primary" id="createBankrollBtn">
+                                <i class="fas fa-plus"></i> Create Bankroll
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Bankroll Stats -->
+                    <div id="bankrollStats" style="display: none;">
+                        <div class="stats-grid">
+                            <div class="stat-item">
+                                <span class="stat-label">Total Allocated</span>
+                                <span class="stat-value" id="totalAllocated">$0.00</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-label">Savings</span>
+                                <span class="stat-value" id="totalSavings">$0.00</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-label">Net P&L</span>
+                                <span class="stat-value" id="netProfitLoss">$0.00</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-label">Pots at Risk</span>
+                                <span class="stat-value" id="potsAtRisk">0</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Bankroll Creation Form -->
+                    <div id="bankrollForm" style="display: none;">
+                        <!-- Simplified Creation Flow -->
+                        <div class="form-step" id="bankrollSetup">
+                            <h4>Create New Bankroll</h4>
+                            <div class="form-group">
+                                <label for="totalBankroll">Total Bankroll Amount ($)</label>
+                                <input type="number" id="totalBankroll" class="form-control" min="1" step="0.01" placeholder="Enter total amount...">
+                                <small class="help-text">This amount will start as savings. Add gaming pots below.</small>
+                            </div>
+                            <div class="button-group">
+                                <button class="btn btn-primary" id="createBankrollWithSavings">Create Bankroll</button>
+                            </div>
+                        </div>
+
+                        <!-- Dynamic Pot Creation -->
+                        <div class="form-step" id="potCreation" style="display: none;">
+                            <h4>Add Gaming Pots</h4>
+                            <div class="savings-info">
+                                <p><i class="fas fa-piggy-bank"></i> <strong>Savings Pot:</strong> $<span id="savingsAmount">0.00</span></p>
+                            </div>
+                            <div id="dynamicPotsContainer"></div>
+                            <div class="button-group">
+                                <button class="btn btn-secondary" id="addNewPot">
+                                    <i class="fas fa-plus"></i> Add Gaming Pot
+                                </button>
+                                <button class="btn btn-primary" id="finalizeBankroll">Finish Setup</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Pots Management -->
+                    <div id="potsManagement" style="display: none;">
+                        <div class="pots-header">
+                            <h4>Your Pots</h4>
+                            <div class="bankroll-actions">
+                                <button class="btn btn-secondary" id="transferMoney">
+                                    <i class="fas fa-exchange-alt"></i> Transfer Money
+                                </button>
+                                <button class="btn btn-danger" id="deleteBankroll">
+                                    <i class="fas fa-trash"></i> Delete Bankroll
+                                </button>
+                            </div>
+                        </div>
+                        <div class="pots-grid" id="potsGrid"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Transfer Money Modal -->
+        <div class="modal-overlay" id="transferOverlay" style="display: none;">
+            <div class="modal">
+                <div class="modal-header">
+                    <h3><i class="fas fa-exchange-alt"></i> Transfer Money</h3>
+                    <button class="btn btn-icon" id="transferClose">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-content">
+                    <div class="form-group">
+                        <label for="fromPot">From Pot</label>
+                        <select id="fromPot" class="form-control">
+                            <option value="">Select source pot...</option>
+                        </select>
+                        <small class="help-text">Available balance: $<span id="availableBalance">0.00</span></small>
+                    </div>
+                    <div class="form-group">
+                        <label for="toPot">To Pot</label>
+                        <select id="toPot" class="form-control">
+                            <option value="">Select destination pot...</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="transferAmount">Amount ($)</label>
+                        <input type="number" id="transferAmount" class="form-control" min="0.01" step="0.01" placeholder="Enter amount...">
+                    </div>
+                    <div class="form-group">
+                        <label for="transferDescription">Description (Optional)</label>
+                        <input type="text" id="transferDescription" class="form-control" placeholder="Transfer reason...">
+                    </div>
+                    <div class="button-group">
+                        <button class="btn btn-secondary" id="cancelTransfer">Cancel</button>
+                        <button class="btn btn-primary" id="confirmTransfer">Confirm Transfer</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Balance Update Modal -->
+        <div class="modal-overlay" id="balanceUpdateOverlay" style="display: none;">
+            <div class="modal balance-update-modal">
+                <div class="modal-header">
+                    <h3><i class="fas fa-balance-scale"></i> Update Balance</h3>
+                    <button class="btn btn-icon" id="balanceUpdateClose">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-content">
+                    <div class="balance-info">
+                        <p><strong>App Balance:</strong> $<span id="appCurrentBalance">0.00</span></p>
+                        <p class="help-text">Due to casino bonuses, multipliers, or other factors, your actual balance might differ from the app's calculated balance.</p>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="actualBalance">Your Actual Balance ($)</label>
+                        <input type="number" id="actualBalance" class="form-control" step="0.01" placeholder="Enter your current casino balance...">
+                        <small class="help-text">Check your casino account for the exact balance</small>
+                    </div>
+                    
+                    <div class="balance-difference" id="balanceDifference" style="display: none;">
+                        <p><strong>Difference:</strong> <span class="difference-amount"></span></p>
+                        <p class="difference-explanation"></p>
+                    </div>
+                </div>
+                <div class="modal-actions">
+                    <button class="btn btn-secondary" id="skipBalanceUpdate">Skip</button>
+                    <button class="btn btn-primary" id="confirmBalanceUpdate">Update Balance</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
