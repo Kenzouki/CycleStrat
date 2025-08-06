@@ -17,10 +17,6 @@
                     <h1>Labouchere Pro</h1>
                 </div>
                 <div class="header-stats">
-                    <div class="stat-card">
-                        <span class="stat-label">Session Time</span>
-                        <span class="stat-value" id="sessionDuration">00:00:00</span>
-                    </div>
                     <div class="cloud-status" id="cloudStatus">
                         <i class="fas fa-cloud-slash" title="Not connected"></i>
                     </div>
@@ -162,79 +158,61 @@
                 </div>
             </section>
 
-            <!-- Session Status Panel -->
+            <!-- Session Controls Panel -->
             <section class="panel status-panel" id="statusPanel" style="display: none;">
                 <div class="panel-header">
-                    <h2><i class="fas fa-tachometer-alt"></i> Session Status</h2>
-                    <div class="panel-actions">
-                        <button class="btn btn-icon" id="pauseSession">
-                            <i class="fas fa-pause"></i>
-                        </button>
-                        <button class="btn btn-icon" id="saveSession">
-                            <i class="fas fa-save"></i>
-                        </button>
-                        <button class="btn btn-icon" id="exportStats">
-                            <i class="fas fa-download"></i>
-                        </button>
-                    </div>
+                    <h2><i class="fas fa-gamepad"></i> Session Controls</h2>
                 </div>
                 <div class="panel-content">
-                    <div class="status-grid">
-                        <div class="status-card balance">
-                            <div class="status-icon">
-                                <i class="fas fa-wallet"></i>
-                            </div>
-                            <div class="status-info">
-                                <span class="status-label">Current Balance</span>
-                                <span class="status-value" id="currentBalance">$0</span>
-                            </div>
+                    <!-- Session Time Display -->
+                    <div class="session-time-card">
+                        <div class="session-time-icon">
+                            <i class="fas fa-clock"></i>
                         </div>
-                        <div class="status-card profit">
-                            <div class="status-icon">
-                                <i class="fas fa-chart-line"></i>
-                            </div>
-                            <div class="status-info">
-                                <span class="status-label">Cycle Profit</span>
-                                <span class="status-value" id="cycleProfit">$0</span>
-                            </div>
+                        <div class="session-time-info">
+                            <div class="session-time-label">Session Duration</div>
+                            <div class="session-time-value" id="sessionDuration">00:00:00</div>
                         </div>
-                        <div class="status-card cycle">
-                            <div class="status-icon">
-                                <i class="fas fa-sync-alt"></i>
-                            </div>
-                            <div class="status-info">
-                                <span class="status-label">Current Cycle</span>
-                                <span class="status-value" id="currentCycle">1</span>
-                            </div>
-                        </div>
-                        <div class="status-card total">
-                            <div class="status-icon">
-                                <i class="fas fa-trophy"></i>
-                            </div>
-                            <div class="status-info">
-                                <span class="status-label">Total Profit</span>
-                                <span class="status-value" id="totalProfit">$0</span>
-                            </div>
-                        </div>
-                        <div class="status-card wagered">
-                            <div class="status-icon">
+                    </div>
+                    
+                    <!-- Action Buttons -->
+                    <div class="session-controls">
+                        <button class="btn btn-large" id="pauseSession" title="Pause/Resume Session">
+                            <i class="fas fa-pause"></i>
+                            <span>Pause</span>
+                        </button>
+                        <button class="btn btn-large btn-success" id="saveSession" title="Save Session">
+                            <i class="fas fa-save"></i>
+                            <span>Save</span>
+                        </button>
+                        <button class="btn btn-large btn-info" id="exportStats" title="Export Statistics">
+                            <i class="fas fa-download"></i>
+                            <span>Export</span>
+                        </button>
+                    </div>
+                    
+                    <!-- Additional Stats -->
+                    <div class="additional-stats">
+                        <div class="stat-item">
+                            <div class="stat-icon">
                                 <i class="fas fa-coins"></i>
                             </div>
-                            <div class="status-info">
-                                <span class="status-label">Total Wagered</span>
-                                <span class="status-value" id="totalWagered">$0</span>
+                            <div class="stat-info">
+                                <span class="stat-label">Total Wagered</span>
+                                <span class="stat-value" id="totalWagered">$0</span>
                             </div>
                         </div>
-                        <div class="status-card risk">
-                            <div class="status-icon">
-                                <i class="fas fa-shield-alt"></i>
+                        <div class="stat-item">
+                            <div class="stat-icon">
+                                <i class="fas fa-trophy"></i>
                             </div>
-                            <div class="status-info">
-                                <span class="status-label">Risk Remaining</span>
-                                <span class="status-value" id="riskRemaining">$0</span>
+                            <div class="stat-info">
+                                <span class="stat-label">Total Profit</span>
+                                <span class="stat-value" id="totalProfit">$0</span>
                             </div>
                         </div>
                     </div>
+                </div>
 
                     <!-- Risk Warning -->
                     <div class="risk-warning" id="riskWarning" style="display: none;">
@@ -316,37 +294,77 @@
                 </div>
                 <div class="panel-content" id="liveStatsContent">
                     <div class="live-stats-grid">
+                        <div class="live-stat-card balance">
+                            <div class="live-stat-icon">
+                                <i class="fas fa-wallet"></i>
+                            </div>
+                            <div class="live-stat-info">
+                                <div class="live-stat-label">Current Balance</div>
+                                <div class="live-stat-value" id="currentBalance">$0</div>
+                            </div>
+                        </div>
                         <div class="live-stat-card profit">
-                            <div class="live-stat-label">Profit</div>
-                            <div class="live-stat-value" id="liveProfit">$0.00</div>
+                            <div class="live-stat-icon">
+                                <i class="fas fa-chart-line"></i>
+                            </div>
+                            <div class="live-stat-info">
+                                <div class="live-stat-label">Cycle Profit</div>
+                                <div class="live-stat-value" id="cycleProfit">$0</div>
+                            </div>
+                        </div>
+                        <div class="live-stat-card cycle">
+                            <div class="live-stat-icon">
+                                <i class="fas fa-sync-alt"></i>
+                            </div>
+                            <div class="live-stat-info">
+                                <div class="live-stat-label">Current Cycle</div>
+                                <div class="live-stat-value" id="currentCycle">1</div>
+                            </div>
+                        </div>
+                        <div class="live-stat-card risk">
+                            <div class="live-stat-icon">
+                                <i class="fas fa-shield-alt"></i>
+                            </div>
+                            <div class="live-stat-info">
+                                <div class="live-stat-label">Risk Remaining</div>
+                                <div class="live-stat-value" id="riskRemaining">$0</div>
+                            </div>
+                        </div>
+                        <div class="live-stat-card total-profit">
+                            <div class="live-stat-icon">
+                                <i class="fas fa-trophy"></i>
+                            </div>
+                            <div class="live-stat-info">
+                                <div class="live-stat-label">Session Profit</div>
+                                <div class="live-stat-value" id="liveProfit">$0.00</div>
+                            </div>
                         </div>
                         <div class="live-stat-card wins">
-                            <div class="live-stat-label">Wins</div>
-                            <div class="live-stat-value" id="liveWins">0</div>
-                        </div>
-                        <div class="live-stat-card wagered">
-                            <div class="live-stat-label">Wagered</div>
-                            <div class="live-stat-value" id="liveWagered">$0.00</div>
+                            <div class="live-stat-icon">
+                                <i class="fas fa-check-circle"></i>
+                            </div>
+                            <div class="live-stat-info">
+                                <div class="live-stat-label">Wins</div>
+                                <div class="live-stat-value" id="liveWins">0</div>
+                            </div>
                         </div>
                         <div class="live-stat-card losses">
-                            <div class="live-stat-label">Losses</div>
-                            <div class="live-stat-value" id="liveLosses">0</div>
+                            <div class="live-stat-icon">
+                                <i class="fas fa-times-circle"></i>
+                            </div>
+                            <div class="live-stat-info">
+                                <div class="live-stat-label">Losses</div>
+                                <div class="live-stat-value" id="liveLosses">0</div>
+                            </div>
                         </div>
                         <div class="live-stat-card win-rate">
-                            <div class="live-stat-label">Win Rate</div>
-                            <div class="live-stat-value" id="liveWinRate">0%</div>
-                        </div>
-                        <div class="live-stat-card consecutive">
-                            <div class="live-stat-label">Current Streak</div>
-                            <div class="live-stat-value" id="currentStreak">-</div>
-                        </div>
-                        <div class="live-stat-card max-consecutive">
-                            <div class="live-stat-label">Max Wins</div>
-                            <div class="live-stat-value" id="maxWins">0</div>
-                        </div>
-                        <div class="live-stat-card max-consecutive">
-                            <div class="live-stat-label">Max Losses</div>
-                            <div class="live-stat-value" id="maxLosses">0</div>
+                            <div class="live-stat-icon">
+                                <i class="fas fa-percentage"></i>
+                            </div>
+                            <div class="live-stat-info">
+                                <div class="live-stat-label">Win Rate</div>
+                                <div class="live-stat-value" id="liveWinRate">0%</div>
+                            </div>
                         </div>
                     </div>
                     <div class="profit-chart-container">

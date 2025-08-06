@@ -38,6 +38,7 @@ interface SessionData {
   allCycleSequences: number[][];
   maxConsecutiveWins: number;
   maxConsecutiveLosses: number;
+  currentStreak: number;
 }
 
 interface HistoryEntry {
@@ -328,7 +329,8 @@ class LabouchereApp {
         sequence: [],
         allCycleSequences: [],
         maxConsecutiveWins: 0,
-        maxConsecutiveLosses: 0
+        maxConsecutiveLosses: 0,
+        currentStreak: 0
       },
       history: []
     };
@@ -755,6 +757,7 @@ class LabouchereApp {
       data.allCycleSequences = [];
       data.maxConsecutiveWins = 0;
       data.maxConsecutiveLosses = 0;
+      data.currentStreak = 0;
 
       // Initialize all cycle sequences
       for (let i = 0; i < numberOfCycles; i++) {
@@ -1336,6 +1339,7 @@ class LabouchereApp {
     data.totalProfit = 0;
     data.maxConsecutiveWins = 0;
     data.maxConsecutiveLosses = 0;
+    data.currentStreak = 0;
 
     // Reset streak tracking
     this.consecutiveWins = 0;
@@ -1741,10 +1745,14 @@ class LabouchereApp {
     if (data.maxConsecutiveLosses === undefined) {
       data.maxConsecutiveLosses = 0;
     }
+    if (data.currentStreak === undefined) {
+      data.currentStreak = 0;
+    }
     
     // Sync loaded stats with class properties
     this.maxConsecutiveWins = data.maxConsecutiveWins;
     this.maxConsecutiveLosses = data.maxConsecutiveLosses;
+    this.currentStreak = data.currentStreak;
     
     // Restart session timer
     this.startSessionTimer();
@@ -2240,6 +2248,7 @@ class LabouchereApp {
       // Sync to session data
       if (this.currentSession) {
         this.currentSession.data.maxConsecutiveWins = this.maxConsecutiveWins;
+        this.currentSession.data.currentStreak = this.currentStreak;
       }
     } else {
       if (this.currentStreak > 0) {
@@ -2256,6 +2265,7 @@ class LabouchereApp {
       // Sync to session data
       if (this.currentSession) {
         this.currentSession.data.maxConsecutiveLosses = this.maxConsecutiveLosses;
+        this.currentSession.data.currentStreak = this.currentStreak;
       }
     }
   }
@@ -2266,11 +2276,12 @@ class LabouchereApp {
     const metadata = this.currentSession.metadata;
     const data = this.currentSession.data;
 
-    // Update profit (use total profit from session data)
+    // Update profit (current session profit including current cycle)
     const profitElement = this.elements.liveProfit;
     if (profitElement) {
-      profitElement.textContent = `$${data.totalProfit.toFixed(2)}`;
-      profitElement.classList.toggle('negative', data.totalProfit < 0);
+      const currentProfit = data.totalProfit + data.cycleProfit;
+      profitElement.textContent = `$${currentProfit.toFixed(2)}`;
+      profitElement.classList.toggle('negative', currentProfit < 0);
     }
 
     // Update wins
