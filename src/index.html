@@ -646,6 +646,9 @@
                         <div class="pots-header">
                             <h4>Your Pots</h4>
                             <div class="bankroll-actions">
+                                <button class="btn btn-primary" id="addNewPotManagement">
+                                    <i class="fas fa-plus"></i> Add New Pot
+                                </button>
                                 <button class="btn btn-secondary" id="transferMoney">
                                     <i class="fas fa-exchange-alt"></i> Transfer Money
                                 </button>
@@ -695,6 +698,47 @@
                         <button class="btn btn-secondary" id="cancelTransfer">Cancel</button>
                         <button class="btn btn-primary" id="confirmTransfer">Confirm Transfer</button>
                     </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Add New Pot Modal -->
+        <div class="modal-overlay" id="addNewPotOverlay" style="display: none;">
+            <div class="modal">
+                <div class="modal-header">
+                    <h3><i class="fas fa-plus"></i> Add New Pot</h3>
+                    <button class="btn btn-icon" id="addNewPotClose">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-content">
+                    <div class="form-group">
+                        <label for="newPotName">Pot Name:</label>
+                        <input type="text" id="newPotName" class="form-control" placeholder="Enter pot name..." value="Gaming Pot">
+                    </div>
+                    <div class="form-group">
+                        <label for="newPotAmount">Initial Amount ($):</label>
+                        <input type="number" id="newPotAmount" class="form-control" min="0.01" step="0.01" placeholder="Enter initial amount...">
+                    </div>
+                    <div class="form-group casino-group">
+                        <label for="newPotCasino">Casino:</label>
+                        <select id="newPotCasino" class="form-control" onchange="bankrollUI.updateNewPotNameFromCasino(this)">
+                            <option value="">None (Reserve Pot)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="fundingSource">Fund from:</label>
+                        <select id="fundingSource" class="form-control">
+                            <option value="">Select funding source...</option>
+                        </select>
+                    </div>
+                    <div id="availableFunding" class="available-balance" style="display: none;">
+                        Available: $<span id="availableFundingAmount">0.00</span>
+                    </div>
+                </div>
+                <div class="modal-actions">
+                    <button class="btn btn-secondary" id="cancelNewPot">Cancel</button>
+                    <button class="btn btn-primary" id="confirmNewPot">Create Pot</button>
                 </div>
             </div>
         </div>

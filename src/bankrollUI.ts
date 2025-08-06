@@ -61,9 +61,31 @@ export class BankrollUI {
       this.hideTransferModal();
     });
 
+    // Add new pot management
+    document.getElementById('addNewPotManagement')?.addEventListener('click', () => {
+      this.showAddNewPotModal();
+    });
+
+    document.getElementById('addNewPotClose')?.addEventListener('click', () => {
+      this.hideAddNewPotModal();
+    });
+
+    document.getElementById('cancelNewPot')?.addEventListener('click', () => {
+      this.hideAddNewPotModal();
+    });
+
+    document.getElementById('confirmNewPot')?.addEventListener('click', () => {
+      this.confirmNewPot();
+    });
+
     // From pot selection change
     document.getElementById('fromPot')?.addEventListener('change', () => {
       this.updateAvailableBalance();
+    });
+
+    // Funding source selection change
+    document.getElementById('fundingSource')?.addEventListener('change', () => {
+      this.updateAvailableFunding();
     });
 
     // Close modal on overlay click
@@ -76,6 +98,12 @@ export class BankrollUI {
     document.getElementById('transferOverlay')?.addEventListener('click', (e) => {
       if (e.target === document.getElementById('transferOverlay')) {
         this.hideTransferModal();
+      }
+    });
+
+    document.getElementById('addNewPotOverlay')?.addEventListener('click', (e) => {
+      if (e.target === document.getElementById('addNewPotOverlay')) {
+        this.hideAddNewPotModal();
       }
     });
   }
@@ -97,6 +125,16 @@ export class BankrollUI {
   private hideTransferModal(): void {
     document.getElementById('transferOverlay')!.style.display = 'none';
     this.clearTransferForm();
+  }
+
+  private showAddNewPotModal(): void {
+    document.getElementById('addNewPotOverlay')!.style.display = 'flex';
+    this.populateNewPotModal();
+  }
+
+  private hideAddNewPotModal(): void {
+    document.getElementById('addNewPotOverlay')!.style.display = 'none';
+    this.clearNewPotForm();
   }
 
   private updateDisplay(): void {
@@ -287,6 +325,20 @@ export class BankrollUI {
       if (casinoOption) {
         nameInput.value = casinoOption.label;
       }
+    }
+  }
+
+  public updateNewPotNameFromCasino(selectElement: HTMLSelectElement): void {
+    const nameInput = document.getElementById('newPotName') as HTMLInputElement;
+    const selectedCasino = selectElement.value;
+    
+    if (selectedCasino && nameInput) {
+      const casinoOption = CASINO_OPTIONS.find(option => option.value === selectedCasino);
+      if (casinoOption) {
+        nameInput.value = casinoOption.label;
+      }
+    } else if (!selectedCasino && nameInput) {
+      nameInput.value = 'Gaming Pot';
     }
   }
 
@@ -600,6 +652,127 @@ export class BankrollUI {
     (document.getElementById('transferAmount') as HTMLInputElement).value = '';
     (document.getElementById('transferDescription') as HTMLInputElement).value = '';
     document.getElementById('availableBalance')!.textContent = '0.00';
+  }
+
+  private populateNewPotModal(): void {
+    // Populate casino options
+    const casinoSelect = document.getElementById('newPotCasino') as HTMLSelectElement;
+    casinoSelect.innerHTML = '<option value="">None (Reserve Pot)</option>';
+    CASINO_OPTIONS.forEach(casino => {
+      const option = document.createElement('option');
+      option.value = casino.value;
+      option.textContent = `${casino.icon} ${casino.label}`;
+      casinoSelect.appendChild(option);
+    });
+
+    // Populate funding sources (only show pots with balance > 0)
+    const fundingSelect = document.getElementById('fundingSource') as HTMLSelectElement;
+    const pots = this.bankrollService.getAllPots().filter(pot => pot.isActive && pot.currentBalance > 0);
+    
+    fundingSelect.innerHTML = '<option value="">Select funding source...</option>';
+    pots.forEach(pot => {
+      const option = document.createElement('option');
+      option.value = pot.id;
+      option.textContent = `${pot.name} ($${pot.currentBalance.toFixed(2)})`;
+      fundingSelect.appendChild(option);
+    });
+  }
+
+  private clearNewPotForm(): void {
+    (document.getElementById('newPotName') as HTMLInputElement).value = 'Gaming Pot';
+    (document.getElementById('newPotAmount') as HTMLInputElement).value = '';
+    (document.getElementById('newPotCasino') as HTMLSelectElement).value = '';
+    (document.getElementById('fundingSource') as HTMLSelectElement).value = '';
+    document.getElementById('availableFunding')!.style.display = 'none';
+  }
+
+  private updateAvailableFunding(): void {
+    const fundingSelect = document.getElementById('fundingSource') as HTMLSelectElement;
+    const fundingInfo = document.getElementById('availableFunding')!;
+    const fundingAmount = document.getElementById('availableFundingAmount')!;
+    
+    if (fundingSelect.value) {
+      const pot = this.bankrollService.getPotById(fundingSelect.value);
+      if (pot) {
+        fundingAmount.textContent = pot.currentBalance.toFixed(2);
+        fundingInfo.style.display = 'block';
+      }
+    } else {
+      fundingInfo.style.display = 'none';
+    }
+  }
+
+  private confirmNewPot(): void {
+    const nameInput = document.getElementById('newPotName') as HTMLInputElement;
+    const amountInput = document.getElementById('newPotAmount') as HTMLInputElement;
+    const casinoSelect = document.getElementById('newPotCasino') as HTMLSelectElement;
+    const fundingSelect = document.getElementById('fundingSource') as HTMLSelectElement;
+    
+    const name = nameInput.value.trim();
+    const amount = parseFloat(amountInput.value);
+    const casino = casinoSelect.value || undefined;
+    const fundingPotId = fundingSelect.value;
+    
+    // Validation
+    if (!name) {
+      this.showToast('Please enter a pot name', 'error');
+      return;
+    }
+    
+    if (!amount || amount <= 0) {
+      this.showToast('Please enter a valid initial amount', 'error');
+      return;
+    }
+    
+    if (!fundingPotId) {
+      this.showToast('Please select a funding source', 'error');
+      return;
+    }
+    
+    const fundingPot = this.bankrollService.getPotById(fundingPotId);
+    if (!fundingPot) {
+      this.showToast('Invalid funding source selected', 'error');
+      return;
+    }
+    
+    if (amount > fundingPot.currentBalance) {
+      this.showToast(`Amount exceeds available balance ($${fundingPot.currentBalance.toFixed(2)})`, 'error');
+      return;
+    }
+    
+    try {
+      // Create the new gaming pot
+      this.bankrollService.addGamingPot(name, casino);
+      
+      // Find the newly created pot
+      const newPot = this.bankrollService.getAllPots().find(pot => 
+        pot.name === name && pot.type === PotType.GAMING
+      );
+      
+      if (newPot) {
+        // Transfer money from funding pot to the new pot
+        const success = this.bankrollService.transferMoney(
+          fundingPotId, 
+          newPot.id, 
+          amount, 
+          'Initial pot funding'
+        );
+        
+        if (success) {
+          this.showToast('New pot created successfully!', 'success');
+          this.hideAddNewPotModal();
+          this.updateDisplay();
+        } else {
+          // If transfer failed, remove the created pot
+          this.bankrollService.deletePot(newPot.id);
+          this.showToast('Failed to fund new pot', 'error');
+        }
+      } else {
+        this.showToast('Error creating new pot', 'error');
+      }
+    } catch (error) {
+      this.showToast('Error: ' + (error as Error).message, 'error');
+    }
   }
 
   // Public methods for pot management (called from pot cards)
