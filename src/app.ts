@@ -36,6 +36,8 @@ interface SessionData {
   cycleProfit: number;
   sequence: number[];
   allCycleSequences: number[][];
+  maxConsecutiveWins: number;
+  maxConsecutiveLosses: number;
 }
 
 interface HistoryEntry {
@@ -324,7 +326,9 @@ class LabouchereApp {
         currentCycle: 1,
         cycleProfit: 0,
         sequence: [],
-        allCycleSequences: []
+        allCycleSequences: [],
+        maxConsecutiveWins: 0,
+        maxConsecutiveLosses: 0
       },
       history: []
     };
@@ -749,6 +753,8 @@ class LabouchereApp {
       data.cycleProfit = 0;
       data.sequence = [];
       data.allCycleSequences = [];
+      data.maxConsecutiveWins = 0;
+      data.maxConsecutiveLosses = 0;
 
       // Initialize all cycle sequences
       for (let i = 0; i < numberOfCycles; i++) {
@@ -1328,6 +1334,8 @@ class LabouchereApp {
     data.cycleProfit = 0;
     data.currentCycle = 1;
     data.totalProfit = 0;
+    data.maxConsecutiveWins = 0;
+    data.maxConsecutiveLosses = 0;
 
     // Reset streak tracking
     this.consecutiveWins = 0;
@@ -1724,6 +1732,19 @@ class LabouchereApp {
     this.isSessionActive = true;
     this.sessionDuration = metadata.sessionDuration;
     this.isSessionPaused = false; // Always resume loaded sessions
+    
+    // Migrate legacy session data if needed
+    const data = this.currentSession.data;
+    if (data.maxConsecutiveWins === undefined) {
+      data.maxConsecutiveWins = 0;
+    }
+    if (data.maxConsecutiveLosses === undefined) {
+      data.maxConsecutiveLosses = 0;
+    }
+    
+    // Sync loaded stats with class properties
+    this.maxConsecutiveWins = data.maxConsecutiveWins;
+    this.maxConsecutiveLosses = data.maxConsecutiveLosses;
     
     // Restart session timer
     this.startSessionTimer();
@@ -2215,6 +2236,11 @@ class LabouchereApp {
       this.consecutiveWins = this.currentStreak;
       this.consecutiveLosses = 0;
       this.maxConsecutiveWins = Math.max(this.maxConsecutiveWins, this.consecutiveWins);
+      
+      // Sync to session data
+      if (this.currentSession) {
+        this.currentSession.data.maxConsecutiveWins = this.maxConsecutiveWins;
+      }
     } else {
       if (this.currentStreak > 0) {
         // Switching from win streak to loss streak
@@ -2226,6 +2252,11 @@ class LabouchereApp {
       this.consecutiveLosses = Math.abs(this.currentStreak);
       this.consecutiveWins = 0;
       this.maxConsecutiveLosses = Math.max(this.maxConsecutiveLosses, this.consecutiveLosses);
+      
+      // Sync to session data
+      if (this.currentSession) {
+        this.currentSession.data.maxConsecutiveLosses = this.maxConsecutiveLosses;
+      }
     }
   }
 
