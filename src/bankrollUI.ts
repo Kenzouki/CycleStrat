@@ -978,6 +978,12 @@ export class BankrollUI {
       }
     }
   }
+
+  // Public method to refresh bankroll data (e.g., when auth state changes)
+  async refreshBankroll(): Promise<void> {
+    await this.bankrollService.refreshBankroll();
+    this.updateDisplay();
+  }
 }
 
 // Global instance for pot card actions

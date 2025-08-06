@@ -85,9 +85,13 @@ class LabouchereApp {
   constructor() {
     this.authManager = new AuthManager();
     
-    // Set up callback to refresh sessions when auth state changes
+    // Set up callback to refresh sessions and bankroll when auth state changes
     this.authManager.setAuthChangeCallback(async () => {
       await this.loadSavedSessions();
+      // Also refresh bankroll data for cloud persistence
+      if ((window as any).bankrollUI && typeof (window as any).bankrollUI.refreshBankroll === 'function') {
+        await (window as any).bankrollUI.refreshBankroll();
+      }
     });
     
     // Make CASINO_OPTIONS globally available

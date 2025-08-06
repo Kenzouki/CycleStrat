@@ -23,22 +23,36 @@ export class BankrollService {
           this.parseBankrollData(cloudResult.data);
           return;
         }
+        // If user is signed in but no cloud bankroll exists, 
+        // don't fallback to localStorage - show "No Bankroll Created"
+        else if (cloudResult.success && !cloudResult.data) {
+          this.bankroll = null;
+          return;
+        }
       }
     } catch (error) {
       console.error('Failed to load bankroll from cloud:', error);
     }
 
-    // Fallback to localStorage
-    const stored = localStorage.getItem(BankrollService.STORAGE_KEY);
-    if (stored) {
-      try {
-        const data = JSON.parse(stored);
-        this.parseBankrollData(data);
-      } catch (error) {
-        console.error('Failed to load bankroll:', error);
-        this.bankroll = null;
+    // Fallback to localStorage only if user is not signed in
+    const isSignedIn = await this.cloudStorage.isSignedIn().catch(() => false);
+    if (!isSignedIn) {
+      const stored = localStorage.getItem(BankrollService.STORAGE_KEY);
+      if (stored) {
+        try {
+          const data = JSON.parse(stored);
+          this.parseBankrollData(data);
+        } catch (error) {
+          console.error('Failed to load bankroll:', error);
+          this.bankroll = null;
+        }
       }
     }
+  }
+
+  // Public method to refresh bankroll data (e.g., when auth state changes)
+  async refreshBankroll(): Promise<void> {
+    await this.loadBankroll();
   }
 
   private parseBankrollData(data: any): void {
