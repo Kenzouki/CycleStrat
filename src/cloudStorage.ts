@@ -191,12 +191,15 @@ export class CloudStorage {
         return { success: false, error: 'Not authenticated' };
       }
 
+      // Serialize the bankroll data to ensure Date objects are properly converted
+      const serializedData = JSON.parse(JSON.stringify(bankrollData));
+
       const { error } = await supabase
         .from('bankrolls')
         .upsert({
           id: 'user_bankroll',
           user_id: user.id,
-          data: bankrollData,
+          data: serializedData,
           updated_at: new Date().toISOString(),
         });
 
