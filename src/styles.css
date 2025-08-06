@@ -1376,6 +1376,12 @@ select:focus-visible {
     order: 4;
   }
   
+  /* Live stats spans both columns */
+  .live-stats-panel {
+    order: 5;
+    grid-column: 1 / -1;
+  }
+  
   /* Compact panel content */
   .panel-content {
     padding: 0.75rem;
@@ -2280,7 +2286,7 @@ select:focus-visible {
 
 .live-stats-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(6, 1fr);
   gap: 0.75rem;
   margin-bottom: 1.5rem;
 }
@@ -2314,13 +2320,17 @@ select:focus-visible {
 }
 
 .live-stat-card.balance .live-stat-icon { background: #10b981; }
-.live-stat-card.profit .live-stat-icon { background: #f59e0b; }
+.live-stat-card.cycle-profit .live-stat-icon { background: #f59e0b; }
 .live-stat-card.cycle .live-stat-icon { background: #8b5cf6; }
 .live-stat-card.risk .live-stat-icon { background: #ef4444; }
-.live-stat-card.total-profit .live-stat-icon { background: #06b6d4; }
+.live-stat-card.session-profit .live-stat-icon { background: #06b6d4; }
+.live-stat-card.wagered .live-stat-icon { background: #78716c; }
 .live-stat-card.wins .live-stat-icon { background: #22c55e; }
 .live-stat-card.losses .live-stat-icon { background: #f87171; }
 .live-stat-card.win-rate .live-stat-icon { background: #3b82f6; }
+.live-stat-card.current-streak .live-stat-icon { background: #fb7185; }
+.live-stat-card.max-wins .live-stat-icon { background: #fbbf24; }
+.live-stat-card.max-losses .live-stat-icon { background: #dc2626; }
 
 .live-stat-card:hover {
   background: var(--bg-tertiary);
@@ -2537,9 +2547,16 @@ select:focus-visible {
 }
 
 /* Responsive adjustments */
+@media (max-width: 1024px) {
+  .live-stats-grid {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.5rem;
+  }
+}
+
 @media (max-width: 768px) {
   .live-stats-grid {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(3, 1fr);
     gap: 0.5rem;
   }
   
@@ -2554,7 +2571,7 @@ select:focus-visible {
 
 @media (max-width: 480px) {
   .live-stats-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, 1fr);
   }
 }
 

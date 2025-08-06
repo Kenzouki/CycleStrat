@@ -191,27 +191,6 @@
                         </button>
                     </div>
                     
-                    <!-- Additional Stats -->
-                    <div class="additional-stats">
-                        <div class="stat-item">
-                            <div class="stat-icon">
-                                <i class="fas fa-coins"></i>
-                            </div>
-                            <div class="stat-info">
-                                <span class="stat-label">Total Wagered</span>
-                                <span class="stat-value" id="totalWagered">$0</span>
-                            </div>
-                        </div>
-                        <div class="stat-item">
-                            <div class="stat-icon">
-                                <i class="fas fa-trophy"></i>
-                            </div>
-                            <div class="stat-info">
-                                <span class="stat-label">Total Profit</span>
-                                <span class="stat-value" id="totalProfit">$0</span>
-                            </div>
-                        </div>
-                    </div>
                 </div>
 
                     <!-- Risk Warning -->
@@ -303,7 +282,7 @@
                                 <div class="live-stat-value" id="currentBalance">$0</div>
                             </div>
                         </div>
-                        <div class="live-stat-card profit">
+                        <div class="live-stat-card cycle-profit">
                             <div class="live-stat-icon">
                                 <i class="fas fa-chart-line"></i>
                             </div>
@@ -330,13 +309,22 @@
                                 <div class="live-stat-value" id="riskRemaining">$0</div>
                             </div>
                         </div>
-                        <div class="live-stat-card total-profit">
+                        <div class="live-stat-card session-profit">
                             <div class="live-stat-icon">
                                 <i class="fas fa-trophy"></i>
                             </div>
                             <div class="live-stat-info">
                                 <div class="live-stat-label">Session Profit</div>
                                 <div class="live-stat-value" id="liveProfit">$0.00</div>
+                            </div>
+                        </div>
+                        <div class="live-stat-card wagered">
+                            <div class="live-stat-icon">
+                                <i class="fas fa-coins"></i>
+                            </div>
+                            <div class="live-stat-info">
+                                <div class="live-stat-label">Total Wagered</div>
+                                <div class="live-stat-value" id="liveWagered">$0.00</div>
                             </div>
                         </div>
                         <div class="live-stat-card wins">
@@ -364,6 +352,33 @@
                             <div class="live-stat-info">
                                 <div class="live-stat-label">Win Rate</div>
                                 <div class="live-stat-value" id="liveWinRate">0%</div>
+                            </div>
+                        </div>
+                        <div class="live-stat-card current-streak">
+                            <div class="live-stat-icon">
+                                <i class="fas fa-fire"></i>
+                            </div>
+                            <div class="live-stat-info">
+                                <div class="live-stat-label">Current Streak</div>
+                                <div class="live-stat-value" id="currentStreak">-</div>
+                            </div>
+                        </div>
+                        <div class="live-stat-card max-wins">
+                            <div class="live-stat-icon">
+                                <i class="fas fa-star"></i>
+                            </div>
+                            <div class="live-stat-info">
+                                <div class="live-stat-label">Max Wins</div>
+                                <div class="live-stat-value" id="maxWins">0</div>
+                            </div>
+                        </div>
+                        <div class="live-stat-card max-losses">
+                            <div class="live-stat-icon">
+                                <i class="fas fa-exclamation-triangle"></i>
+                            </div>
+                            <div class="live-stat-info">
+                                <div class="live-stat-label">Max Losses</div>
+                                <div class="live-stat-value" id="maxLosses">0</div>
                             </div>
                         </div>
                     </div>
