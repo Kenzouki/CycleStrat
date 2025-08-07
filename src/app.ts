@@ -130,7 +130,7 @@ class LabouchereApp {
       'liveProfit', 'liveWins', 'liveWagered', 'liveLosses', 'liveWinRate', 
       'currentStreak', 'maxWins', 'maxLosses', 'refreshStats', 'collapseLiveStats', 'themeToggle',
       'sequenceContainer', 'historyBody', 'clearHistory', 'undoLastBet',
-      'collapseSetup', 'setupContent', 'betTypeInfo',
+      'sortCurrentCycle', 'autoSort', 'collapseSetup', 'setupContent', 'betTypeInfo',
       'modalOverlay', 'modalTitle', 'modalMessage', 'modalConfirm', 'modalCancel', 'modalClose',
       'toastContainer', 'openSettings', 'settingsOverlay', 'settingsClose', 'settingsCancel',
       'saveSettings', 'cloudStatus', 'authBtn', 'authOverlay', 'authClose', 'signinForm',
@@ -138,7 +138,9 @@ class LabouchereApp {
       'confirmPassword', 'signupBtn', 'signinError', 'signupError', 'localSessionCount', 'localStorageSize',
       'exportAllLocal', 'clearAllLocal', 'setupGuideLink', 'setupGuideOverlay',
       'setupGuideClose', 'setupGuideOk', 'balanceUpdateOverlay', 'balanceUpdateClose', 
-      'appCurrentBalance', 'actualBalance', 'balanceDifference', 'skipBalanceUpdate', 'confirmBalanceUpdate'
+      'appCurrentBalance', 'actualBalance', 'balanceDifference', 'skipBalanceUpdate', 'confirmBalanceUpdate',
+      'reshuffleCycles', 'reshuffleOverlay', 'reshuffleClose', 'remainingSum', 'newCycleCount',
+      'cyclePreview', 'valuePerCycle', 'cycleValuePreview', 'reshuffleCancel', 'reshuffleConfirm'
     ];
 
     elementIds.forEach(id => {
@@ -185,6 +187,10 @@ class LabouchereApp {
     this.elements.clearHistory?.addEventListener('click', () => this.clearHistory());
     this.elements.undoLastBet?.addEventListener('click', () => this.undoLastBet());
 
+    // Sequence actions
+    this.elements.sortCurrentCycle?.addEventListener('click', () => this.sortCurrentCycle());
+    this.elements.reshuffleCycles?.addEventListener('click', () => this.showReshuffleModal());
+
     // UI toggles
     this.elements.collapseSetup?.addEventListener('click', () => this.toggleSetupPanel());
     this.elements.collapseLiveStats?.addEventListener('click', () => this.toggleLiveStatsPanel());
@@ -230,6 +236,15 @@ class LabouchereApp {
     this.elements.actualBalance?.addEventListener('input', () => this.updateBalanceDifference());
     this.elements.balanceUpdateOverlay?.addEventListener('click', (e) => {
       if (e.target === this.elements.balanceUpdateOverlay) this.closeBalanceUpdate();
+    });
+
+    // Reshuffle handlers
+    this.elements.reshuffleClose?.addEventListener('click', () => this.closeReshuffleModal());
+    this.elements.reshuffleCancel?.addEventListener('click', () => this.closeReshuffleModal());
+    this.elements.reshuffleConfirm?.addEventListener('click', () => this.confirmReshuffle());
+    this.elements.newCycleCount?.addEventListener('input', () => this.updateReshufflePreview());
+    this.elements.reshuffleOverlay?.addEventListener('click', (e) => {
+      if (e.target === this.elements.reshuffleOverlay) this.closeReshuffleModal();
     });
   }
 
@@ -784,6 +799,12 @@ class LabouchereApp {
       // Set current sequence to first cycle
       data.sequence = [...data.allCycleSequences[0]];
 
+      // Auto-sort the initial sequence if enabled
+      if (this.shouldAutoSort() && data.sequence.length > 0) {
+        data.sequence.sort((a, b) => a - b);
+        data.allCycleSequences[0] = [...data.sequence];
+      }
+
       // Clear history
       this.currentSession.history = [];
       const tbody = this.elements.historyBody;
@@ -942,6 +963,12 @@ class LabouchereApp {
       // Update sequence in allCycleSequences
       data.allCycleSequences[data.currentCycle - 1] = [...data.sequence];
 
+      // Auto-sort sequence if enabled
+      if (this.shouldAutoSort() && data.sequence.length > 0) {
+        data.sequence.sort((a, b) => a - b);
+        data.allCycleSequences[data.currentCycle - 1] = [...data.sequence];
+      }
+
       // Add to history
       this.addToHistory(isWin, desiredProfit, betSize);
 
@@ -973,6 +1000,12 @@ class LabouchereApp {
       
       data.sequence.push(newSequenceValue);
       data.allCycleSequences[data.currentCycle - 1] = [...data.sequence];
+
+      // Auto-sort sequence if enabled
+      if (this.shouldAutoSort()) {
+        data.sequence.sort((a, b) => a - b);
+        data.allCycleSequences[data.currentCycle - 1] = [...data.sequence];
+      }
 
       // Add to history
       this.addToHistory(isWin, desiredProfit, betSize);
@@ -1115,6 +1148,35 @@ class LabouchereApp {
         this.autoSaveIfEnabled();
       }
     );
+  }
+
+  private sortCurrentCycle(): void {
+    if (!this.currentSession || !this.isSessionActive) {
+      this.showToast('No active session to sort', 'error');
+      return;
+    }
+
+    const data = this.currentSession.data;
+    
+    if (data.sequence.length === 0) {
+      this.showToast('Current sequence is empty', 'error');
+      return;
+    }
+
+    // Sort current cycle sequence from lowest to highest
+    data.sequence.sort((a, b) => a - b);
+    
+    // Update the sequence in allCycleSequences
+    data.allCycleSequences[data.currentCycle - 1] = [...data.sequence];
+
+    this.updateAllDisplays();
+    this.showToast('Current cycle sorted successfully', 'success');
+    this.autoSaveIfEnabled();
+  }
+
+  private shouldAutoSort(): boolean {
+    const autoSortCheckbox = this.elements.autoSort as HTMLInputElement;
+    return autoSortCheckbox && autoSortCheckbox.checked;
   }
 
   // Calculation Methods
@@ -1382,6 +1444,12 @@ class LabouchereApp {
     }
     data.sequence = [...data.allCycleSequences[0]];
 
+    // Auto-sort the initial sequence if enabled (before replaying history)
+    if (this.shouldAutoSort() && data.sequence.length > 0) {
+      data.sequence.sort((a, b) => a - b);
+      data.allCycleSequences[0] = [...data.sequence];
+    }
+
     // Replay history
     this.currentSession.history.forEach(entry => {
       if (entry.outcome === 'Win' || entry.outcome === 'Loss') {
@@ -1418,6 +1486,12 @@ class LabouchereApp {
           if (data.currentCycle <= metadata.numberOfCycles) {
             data.sequence = [...data.allCycleSequences[data.currentCycle - 1]];
             data.cycleProfit = 0;
+            
+            // Auto-sort the new cycle's sequence if enabled
+            if (this.shouldAutoSort() && data.sequence.length > 0) {
+              data.sequence.sort((a, b) => a - b);
+              data.allCycleSequences[data.currentCycle - 1] = [...data.sequence];
+            }
           }
         }
       }
@@ -1549,6 +1623,11 @@ class LabouchereApp {
     this.toggleElementState('betWin', canBet);
     this.toggleElementState('betLoss', canBet);
     this.toggleElementState('splitEntry', canBet && this.currentSession.data.sequence.length > 0);
+    this.toggleElementState('sortCurrentCycle', canBet && this.currentSession.data.sequence.length > 0);
+    
+    // Reshuffle enabled when there are remaining cycles (current + future)
+    const hasRemainingCycles = canBet && this.currentSession.data.currentCycle <= this.currentSession.metadata.numberOfCycles;
+    this.toggleElementState('reshuffleCycles', hasRemainingCycles);
   }
 
   private updateSequenceDisplay(): void {
@@ -1705,6 +1784,12 @@ class LabouchereApp {
     const data = this.currentSession.data;
     data.sequence = [...data.allCycleSequences[data.currentCycle - 1]];
     data.cycleProfit = 0;
+
+    // Auto-sort the new cycle's sequence if enabled
+    if (this.shouldAutoSort() && data.sequence.length > 0) {
+      data.sequence.sort((a, b) => a - b);
+      data.allCycleSequences[data.currentCycle - 1] = [...data.sequence];
+    }
 
     this.addToHistory('CYCLE COMPLETE' as any, 0, 0);
     this.updateAllDisplays();
@@ -2718,6 +2803,154 @@ class LabouchereApp {
       case 'warning': return 'fas fa-exclamation-triangle';
       case 'info': default: return 'fas fa-info-circle';
     }
+  }
+
+  // Reshuffle Methods
+  private showReshuffleModal(): void {
+    if (!this.currentSession || !this.isSessionActive) {
+      this.showToast('No active session to reshuffle', 'error');
+      return;
+    }
+
+    const data = this.currentSession.data;
+    const metadata = this.currentSession.metadata;
+    
+    // Check if there are remaining cycles
+    if (data.currentCycle > metadata.numberOfCycles) {
+      this.showToast('No remaining cycles to reshuffle', 'error');
+      return;
+    }
+
+    // Calculate remaining sum from current and pending cycles
+    const remainingSum = this.calculateRemainingSum();
+    
+    // Update modal with remaining sum
+    const remainingSumElement = this.elements.remainingSum;
+    if (remainingSumElement) {
+      remainingSumElement.textContent = remainingSum.toFixed(2);
+    }
+
+    // Clear previous input and preview
+    const newCycleCountInput = this.elements.newCycleCount as HTMLInputElement;
+    if (newCycleCountInput) {
+      newCycleCountInput.value = '';
+    }
+    this.hideElement('cyclePreview');
+
+    this.showElement('reshuffleOverlay');
+  }
+
+  private closeReshuffleModal(): void {
+    this.hideElement('reshuffleOverlay');
+  }
+
+  private calculateRemainingSum(): number {
+    if (!this.currentSession) return 0;
+
+    const data = this.currentSession.data;
+    let totalSum = 0;
+
+    // Add current cycle sum
+    totalSum += data.sequence.reduce((sum, val) => sum + val, 0);
+
+    // Add all pending cycles sum
+    for (let i = data.currentCycle; i < data.allCycleSequences.length; i++) {
+      totalSum += data.allCycleSequences[i].reduce((sum, val) => sum + val, 0);
+    }
+
+    return totalSum;
+  }
+
+  private updateReshufflePreview(): void {
+    const newCycleCountInput = this.elements.newCycleCount as HTMLInputElement;
+    const newCycleCount = parseInt(newCycleCountInput.value);
+
+    if (!newCycleCount || newCycleCount <= 0 || !this.currentSession) {
+      this.hideElement('cyclePreview');
+      return;
+    }
+
+    const remainingSum = this.calculateRemainingSum();
+    const valuePerCycle = remainingSum / (newCycleCount * 4); // 4 entries per cycle
+    
+    // Update preview elements
+    const valuePerCycleElement = this.elements.valuePerCycle;
+    const cycleValuePreviewElement = this.elements.cycleValuePreview;
+
+    if (valuePerCycleElement && cycleValuePreviewElement) {
+      const roundedValue = this.ensureMinimumBet(valuePerCycle, this.currentSession.metadata.minimumBet);
+      
+      valuePerCycleElement.textContent = roundedValue.toFixed(2);
+      cycleValuePreviewElement.textContent = 
+        `${roundedValue.toFixed(2)} + ${roundedValue.toFixed(2)} + ${roundedValue.toFixed(2)} + ${roundedValue.toFixed(2)}`;
+    }
+
+    this.showElement('cyclePreview');
+  }
+
+  private confirmReshuffle(): void {
+    if (!this.currentSession || !this.isSessionActive) {
+      this.showToast('No active session', 'error');
+      return;
+    }
+
+    const newCycleCountInput = this.elements.newCycleCount as HTMLInputElement;
+    const newCycleCount = parseInt(newCycleCountInput.value);
+
+    if (!newCycleCount || newCycleCount <= 0) {
+      this.showToast('Please enter a valid number of cycles', 'error');
+      return;
+    }
+
+    const data = this.currentSession.data;
+    const metadata = this.currentSession.metadata;
+    const remainingSum = this.calculateRemainingSum();
+    const valuePerEntry = remainingSum / (newCycleCount * 4);
+    const roundedValuePerEntry = this.ensureMinimumBet(valuePerEntry, metadata.minimumBet);
+
+    // Create new cycle sequences
+    const newCycleSequences: number[][] = [];
+    for (let i = 0; i < newCycleCount; i++) {
+      newCycleSequences.push([
+        roundedValuePerEntry,
+        roundedValuePerEntry,
+        roundedValuePerEntry,
+        roundedValuePerEntry
+      ]);
+    }
+
+    // Update session data
+    data.allCycleSequences = [
+      // Keep completed cycles
+      ...data.allCycleSequences.slice(0, data.currentCycle - 1),
+      // Add new reshuffled cycles
+      ...newCycleSequences
+    ];
+
+    // Set current sequence to first new cycle
+    data.sequence = [...newCycleSequences[0]];
+    
+    // Update metadata
+    metadata.numberOfCycles = data.currentCycle - 1 + newCycleCount;
+
+    // Auto-sort the new sequence if enabled
+    if (this.shouldAutoSort() && data.sequence.length > 0) {
+      data.sequence.sort((a, b) => a - b);
+      data.allCycleSequences[data.currentCycle - 1] = [...data.sequence];
+    }
+
+    // Add reshuffle entry to history
+    this.addToHistory('RESHUFFLE' as any, newCycleCount, remainingSum);
+
+    // Update all displays
+    this.updateAllDisplays();
+
+    // Auto-save if enabled
+    this.autoSaveIfEnabled();
+
+    // Close modal and show success message
+    this.closeReshuffleModal();
+    this.showToast(`Cycles reshuffled successfully. Created ${newCycleCount} new cycles.`, 'success');
   }
 }
 

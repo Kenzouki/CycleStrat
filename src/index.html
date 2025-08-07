@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Labouchere Betting System - Professional Edition</title>
+    <title>CycleStrat - Advanced Betting System</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
@@ -14,7 +14,7 @@
             <div class="header-content">
                 <div class="logo">
                     <i class="fas fa-chart-line"></i>
-                    <h1>Labouchere Pro</h1>
+                    <h1>CycleStrat</h1>
                 </div>
                 <div class="header-stats">
                     <!-- Session Controls moved to header -->
@@ -92,6 +92,11 @@
                                     <option value="baccarat">Baccarat</option>
                                     <option value="blackjack">Blackjack</option>
                                     <option value="craps">Craps</option>
+                                    <option value="mines">MINES</option>
+                                    <option value="dice">DICE</option>
+                                    <option value="limbo">LIMBO</option>
+                                    <option value="crash">CRASH</option>
+                                    <option value="flip">FLIP</option>
                                     <option value="other">Other</option>
                                 </select>
                             </div>
@@ -243,6 +248,9 @@
                             <div class="sequence-controls">
                                 <button class="btn btn-small" id="sortCurrentCycle" title="Sort current cycle from lowest to highest">
                                     <i class="fas fa-sort-numeric-up"></i> Sort
+                                </button>
+                                <button class="btn btn-small" id="reshuffleCycles" title="Reshuffle remaining cycles into new equal-sum cycles">
+                                    <i class="fas fa-random"></i> Reshuffle
                                 </button>
                                 <label class="checkbox-label">
                                     <input type="checkbox" id="autoSort" title="Automatically sort sequence after each bet">
@@ -774,6 +782,40 @@
                 <div class="modal-actions">
                     <button class="btn btn-secondary" id="skipBalanceUpdate">Skip</button>
                     <button class="btn btn-primary" id="confirmBalanceUpdate">Update Balance</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Reshuffle Cycles Modal -->
+        <div class="modal-overlay" id="reshuffleOverlay" style="display: none;">
+            <div class="modal">
+                <div class="modal-header">
+                    <h3><i class="fas fa-random"></i> Reshuffle Cycles</h3>
+                    <button class="btn btn-icon" id="reshuffleClose">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-content">
+                    <div class="reshuffle-info">
+                        <p><strong>Current remaining sum:</strong> $<span id="remainingSum">0.00</span></p>
+                        <p class="help-text">This will redistribute the remaining cycle values into new equal-sum cycles.</p>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="newCycleCount">Number of New Cycles</label>
+                        <input type="number" id="newCycleCount" class="form-control" min="1" step="1" placeholder="Enter number of cycles...">
+                        <small class="help-text">Each cycle will have equal total value</small>
+                    </div>
+                    
+                    <div class="cycle-preview" id="cyclePreview" style="display: none;">
+                        <p><strong>Preview:</strong></p>
+                        <p>Each cycle will have <span id="valuePerCycle">0.00</span> per entry</p>
+                        <p>4 entries per cycle: <span id="cycleValuePreview">0.00 + 0.00 + 0.00 + 0.00</span></p>
+                    </div>
+                </div>
+                <div class="modal-actions">
+                    <button class="btn btn-secondary" id="reshuffleCancel">Cancel</button>
+                    <button class="btn btn-primary" id="reshuffleConfirm">Reshuffle</button>
                 </div>
             </div>
         </div>

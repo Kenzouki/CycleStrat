@@ -14,7 +14,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Architecture Overview
 
-This is a TypeScript-based web application implementing the Labouchere betting system. The app is built as a single-page application using vanilla TypeScript with webpack bundling.
+This is a TypeScript-based web application implementing CycleStrat, an advanced betting system inspired by the Labouchere method but enhanced with multi-cycle management and sophisticated features. The app is built as a single-page application using vanilla TypeScript with webpack bundling.
 
 ### Core Architecture
 - **Entry Point**: `src/app.ts` - Main application class and initialization
@@ -24,10 +24,10 @@ This is a TypeScript-based web application implementing the Labouchere betting s
 
 ### Key Components
 
-**LabouchereApp Class** (`src/app.ts`):
+**CycleStratApp Class** (`src/app.ts`):
 - Main application controller managing all functionality
 - Handles session lifecycle, betting logic, and UI updates
-- Implements complete Labouchere betting system with cycle management
+- Implements complete CycleStrat betting system with advanced multi-cycle management
 - Supports both even-money and non-even-money betting scenarios
 
 **Data Structures**:
@@ -45,11 +45,12 @@ This is a TypeScript-based web application implementing the Labouchere betting s
 - Pause/resume functionality
 
 **Betting System**:
-- Multi-cycle Labouchere sequence management
+- Advanced multi-cycle sequence management (CycleStrat's key innovation)
 - Risk management with stop-loss protection
 - Split functionality for large sequence values
 - Support for non-even money bets (2:1, 3:1, etc.)
 - Automatic bet size calculation based on sequence
+- Cycle reshuffling and rebalancing capabilities
 
 **UI Management**:
 - Dynamic panel visibility based on session state
