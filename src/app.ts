@@ -120,6 +120,8 @@ class LabouchereApp {
       'stopLossPercentage', 'useProfitPercentage', 'useStopLossPercentage',
       'minimumBet', 'numberOfCycles', 'evenMoney', 'riskRewardMultiplier',
       'startSession', 'pauseSession', 'saveSession', 'exportStats',
+      'sessionControlsHeader', 'sessionDurationHeader', 'pauseSessionHeader', 'saveSessionHeader', 'exportStatsHeader',
+      'mainPanelsGrid',
       'currentBalance', 'cycleProfit', 'currentCycle', 'totalProfit',
       'totalWagered', 'riskRemaining', 'sessionDuration',
       'nextBetSize', 'desiredProfit', 'betWin', 'betLoss', 'splitEntry',
@@ -168,6 +170,11 @@ class LabouchereApp {
     this.elements.pauseSession?.addEventListener('click', () => this.togglePauseResume());
     this.elements.saveSession?.addEventListener('click', () => this.saveSession());
     this.elements.exportStats?.addEventListener('click', () => this.exportStatistics());
+    
+    // Header session controls
+    this.elements.pauseSessionHeader?.addEventListener('click', () => this.togglePauseResume());
+    this.elements.saveSessionHeader?.addEventListener('click', () => this.saveSession());
+    this.elements.exportStatsHeader?.addEventListener('click', () => this.exportStatistics());
 
     // Betting actions
     this.elements.betWin?.addEventListener('click', () => this.processBet(true));
@@ -850,11 +857,22 @@ class LabouchereApp {
       this.currentSession.metadata.sessionDuration = this.sessionDuration;
     }
 
+    // Hide session panels
+    this.hideElement('sessionControlsHeader');
+    this.hideElement('mainPanelsGrid');
+    this.hideElement('liveStatsPanel');
+    this.hideElement('historyPanel');
+
     // Disable betting controls
     this.toggleElementState('betWin', false);
     this.toggleElementState('betLoss', false);
     this.toggleElementState('splitEntry', false);
     this.toggleElementState('pauseSession', false);
+    this.toggleElementState('pauseSessionHeader', false);
+    this.toggleElementState('saveSession', false);
+    this.toggleElementState('exportStats', false);
+    this.toggleElementState('saveSessionHeader', false);
+    this.toggleElementState('exportStatsHeader', false);
 
     this.showToast(`${reason}: ${message}`, 'info');
     this.autoSaveIfEnabled();
@@ -1677,6 +1695,7 @@ class LabouchereApp {
 
     const timeString = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
     this.setElementText('sessionDuration', timeString);
+    this.setElementText('sessionDurationHeader', timeString);
   }
 
   // Helper Methods for Cycle Management
@@ -1694,16 +1713,21 @@ class LabouchereApp {
 
   // Session Panel Management
   private showSessionPanels(): void {
-    this.showElement('statusPanel');
-    this.showElement('bettingPanel');
-    this.showElement('sequencePanel');
+    // Show header session controls
+    this.showElement('sessionControlsHeader');
+    
+    // Show the main panels grid
+    this.showElement('mainPanelsGrid');
     this.showElement('liveStatsPanel');
     this.showElement('historyPanel');
 
-    // Enable session controls
+    // Enable session controls (both original and header)
     this.toggleElementState('pauseSession', true);
     this.toggleElementState('saveSession', true);
     this.toggleElementState('exportStats', true);
+    this.toggleElementState('pauseSessionHeader', true);
+    this.toggleElementState('saveSessionHeader', true);
+    this.toggleElementState('exportStatsHeader', true);
   }
 
   private populateUIFromSession(): void {

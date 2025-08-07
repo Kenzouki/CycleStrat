@@ -17,6 +17,30 @@
                     <h1>Labouchere Pro</h1>
                 </div>
                 <div class="header-stats">
+                    <!-- Session Controls moved to header -->
+                    <div class="session-controls-header" id="sessionControlsHeader" style="display: none;">
+                        <!-- Session Time Display -->
+                        <div class="session-time-header">
+                            <div class="session-time-info-header">
+                                <div class="session-time-value-header" id="sessionDurationHeader">00:00:00</div>
+                                <div class="session-time-label-header">Session Duration</div>
+                            </div>
+                        </div>
+                        
+                        <!-- Action Buttons -->
+                        <div class="session-actions-header">
+                            <button class="btn btn-icon session-btn" id="pauseSessionHeader" title="Pause/Resume Session">
+                                <i class="fas fa-pause"></i>
+                            </button>
+                            <button class="btn btn-icon session-btn" id="saveSessionHeader" title="Save Session">
+                                <i class="fas fa-save"></i>
+                            </button>
+                            <button class="btn btn-icon session-btn" id="exportStatsHeader" title="Export Statistics">
+                                <i class="fas fa-download"></i>
+                            </button>
+                        </div>
+                    </div>
+
                     <div class="cloud-status" id="cloudStatus">
                         <i class="fas fa-cloud-slash" title="Not connected"></i>
                     </div>
@@ -158,108 +182,74 @@
                 </div>
             </section>
 
-            <!-- Session Controls Panel -->
-            <section class="panel status-panel" id="statusPanel" style="display: none;">
-                <div class="panel-header">
-                    <h2><i class="fas fa-gamepad"></i> Session Controls</h2>
-                </div>
-                <div class="panel-content">
-                    <!-- Session Time Display -->
-                    <div class="session-time-card">
-                        <div class="session-time-icon">
-                            <i class="fas fa-clock"></i>
-                        </div>
-                        <div class="session-time-info">
-                            <div class="session-time-label">Session Duration</div>
-                            <div class="session-time-value" id="sessionDuration">00:00:00</div>
-                        </div>
-                    </div>
-                    
-                    <!-- Action Buttons -->
-                    <div class="session-controls">
-                        <button class="btn btn-large" id="pauseSession" title="Pause/Resume Session">
-                            <i class="fas fa-pause"></i>
-                            <span>Pause</span>
-                        </button>
-                        <button class="btn btn-large btn-success" id="saveSession" title="Save Session">
-                            <i class="fas fa-save"></i>
-                            <span>Save</span>
-                        </button>
-                        <button class="btn btn-large btn-info" id="exportStats" title="Export Statistics">
-                            <i class="fas fa-download"></i>
-                            <span>Export</span>
-                        </button>
-                    </div>
-                    
-                </div>
+            <!-- Risk Warning (moved out of session controls) -->
+            <div class="risk-warning" id="riskWarning" style="display: none;">
+                <i class="fas fa-exclamation-triangle"></i>
+                <span id="riskWarningText"></span>
+            </div>
 
-                    <!-- Risk Warning -->
-                    <div class="risk-warning" id="riskWarning" style="display: none;">
-                        <i class="fas fa-exclamation-triangle"></i>
-                        <span id="riskWarningText"></span>
+            <!-- Side-by-side layout for Betting and Sequence panels -->
+            <div class="main-panels-grid" id="mainPanelsGrid" style="display: none;">
+                <!-- Betting Panel -->
+                <section class="panel betting-panel" id="bettingPanel">
+                    <div class="panel-header">
+                        <h2><i class="fas fa-dice"></i> Place Your Bet</h2>
                     </div>
-                </div>
-            </section>
-
-            <!-- Betting Panel -->
-            <section class="panel betting-panel" id="bettingPanel" style="display: none;">
-                <div class="panel-header">
-                    <h2><i class="fas fa-dice"></i> Place Your Bet</h2>
-                </div>
-                <div class="panel-content">
-                    <div class="bet-info">
-                        <div class="bet-amount">
-                            <span class="bet-label">Next Bet Size</span>
-                            <span class="bet-value" id="nextBetSize">$0</span>
+                    <div class="panel-content">
+                        <div class="bet-info">
+                            <div class="bet-amount">
+                                <span class="bet-label">Next Bet Size</span>
+                                <span class="bet-value" id="nextBetSize">$0</span>
+                            </div>
+                            <div class="desired-profit">
+                                <span class="profit-label">Desired Profit</span>
+                                <span class="profit-value" id="desiredProfit">$0</span>
+                            </div>
                         </div>
-                        <div class="desired-profit">
-                            <span class="profit-label">Desired Profit</span>
-                            <span class="profit-value" id="desiredProfit">$0</span>
+                        <div class="betting-actions">
+                            <button class="btn btn-success btn-large" id="betWin">
+                                <i class="fas fa-check-circle"></i>
+                                Win
+                            </button>
+                            <button class="btn btn-danger btn-large" id="betLoss">
+                                <i class="fas fa-times-circle"></i>
+                                Loss
+                            </button>
+                            <button class="btn btn-warning" id="splitEntry">
+                                <i class="fas fa-cut"></i>
+                                Split Last Entry
+                            </button>
+                        </div>
+                        
+                        <!-- Copy to Clipboard Option -->
+                        <div class="betting-options">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="copyToClipboard" checked>
+                                Auto-copy bet size to clipboard
+                            </label>
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="autoSave" checked>
+                                Auto-save after each bet
+                            </label>
                         </div>
                     </div>
-                    <div class="betting-actions">
-                        <button class="btn btn-success btn-large" id="betWin">
-                            <i class="fas fa-check-circle"></i>
-                            Win
-                        </button>
-                        <button class="btn btn-danger btn-large" id="betLoss">
-                            <i class="fas fa-times-circle"></i>
-                            Loss
-                        </button>
-                        <button class="btn btn-warning" id="splitEntry">
-                            <i class="fas fa-cut"></i>
-                            Split Last Entry
-                        </button>
-                    </div>
-                    
-                    <!-- Copy to Clipboard Option -->
-                    <div class="betting-options">
-                        <label class="checkbox-label">
-                            <input type="checkbox" id="copyToClipboard" checked>
-                            Auto-copy bet size to clipboard
-                        </label>
-                        <label class="checkbox-label">
-                            <input type="checkbox" id="autoSave" checked>
-                            Auto-save after each bet
-                        </label>
-                    </div>
-                </div>
-            </section>
+                </section>
 
-            <!-- Sequence Display Panel -->
-            <section class="panel sequence-panel" id="sequencePanel" style="display: none;">
-                <div class="panel-header">
-                    <h2><i class="fas fa-list-ol"></i> Cycle Sequences</h2>
-                </div>
-                <div class="panel-content">
-                    <div class="sequence-container" id="sequenceContainer">
-                        <!-- Sequences will be dynamically generated here -->
+                <!-- Sequence Display Panel -->
+                <section class="panel sequence-panel" id="sequencePanel">
+                    <div class="panel-header">
+                        <h2><i class="fas fa-list-ol"></i> Cycle Sequences</h2>
                     </div>
-                </div>
-            </section>
+                    <div class="panel-content">
+                        <div class="sequence-container" id="sequenceContainer">
+                            <!-- Sequences will be dynamically generated here -->
+                        </div>
+                    </div>
+                </section>
+            </div>
 
             <!-- Live Stats Panel -->
-            <section class="panel live-stats-panel" id="liveStatsPanel" style="display: none;">
+            <section class="panel live-stats-panel full-width-panel" id="liveStatsPanel" style="display: none;">
                 <div class="panel-header">
                     <h2><i class="fas fa-chart-area"></i> Live Stats</h2>
                     <div class="panel-actions">
@@ -389,7 +379,7 @@
             </section>
 
             <!-- History Panel -->
-            <section class="panel history-panel" id="historyPanel" style="display: none;">
+            <section class="panel history-panel full-width-panel" id="historyPanel" style="display: none;">
                 <div class="panel-header">
                     <h2><i class="fas fa-history"></i> Betting History</h2>
                     <div class="panel-actions">

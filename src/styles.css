@@ -170,7 +170,62 @@ body {
 
 .header-stats {
   display: flex;
+  align-items: center;
   gap: 2rem;
+}
+
+/* Session Controls in Header */
+.session-controls-header {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  padding-right: 1.5rem;
+  border-right: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.session-time-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.session-time-info-header {
+  text-align: center;
+}
+
+.session-time-value-header {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: white;
+  font-family: 'Courier New', monospace;
+  line-height: 1;
+}
+
+.session-time-label-header {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.8);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-top: 2px;
+}
+
+.session-actions-header {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.session-btn {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: white;
+  transition: all 0.2s ease;
+}
+
+.session-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.3);
+  transform: translateY(-1px);
 }
 
 .stat-card {
@@ -200,11 +255,52 @@ body {
   display: flex;
   flex-direction: column;
   gap: 2rem;
+  /* Ensure consistent width for all child elements */
+  box-sizing: border-box;
+}
+
+/* New layout grid for main panels */
+.main-panels-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+  margin-bottom: 2rem;
+  /* Ensure same width as full-width panels */
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Ensure the grid container matches the width of full-width panels exactly */
+.main-content > .main-panels-grid {
+  width: 100%;
+  max-width: none;
+  margin-left: 0;
+  margin-right: 0;
+}
+
+.full-width-panel {
+  grid-column: 1 / -1;
+  /* Match width exactly with the grid container */
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Ensure all direct children of main-content align properly */
+.main-content > .panel,
+.main-content > .main-panels-grid,
+.main-content > .full-width-panel,
+.main-content > .risk-warning {
+  width: 100%;
+  box-sizing: border-box;
+  /* Ensure no margins that could cause misalignment */
+  margin-left: 0;
+  margin-right: 0;
 }
 
 /* Panels */
 .panel {
   background: var(--bg-primary);
+  box-sizing: border-box;
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-md);
   border: 1px solid var(--border-color);
@@ -1034,6 +1130,17 @@ body {
     flex-direction: column;
     gap: 0.25rem;
   }
+
+  /* Stack panels vertically on mobile */
+  .main-panels-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  /* Hide session controls from header on mobile */
+  .session-controls-header {
+    display: none !important;
+  }
 }
 
 @media (max-width: 480px) {
@@ -1358,27 +1465,36 @@ select:focus-visible {
     margin-bottom: 1rem;
   }
   
-  /* Left column - Status and Betting */
-  .status-panel {
+  /* Session panel at top */
+  .session-panel {
     order: 1;
   }
   
-  .betting-panel {
-    order: 2;
-  }
-  
-  /* Right column - Sequences and History */
+  /* Individual panels within main-panels-grid don't need specific orders */
+  .betting-panel,
   .sequence-panel {
-    order: 3;
+    order: initial;
   }
   
-  .history-panel {
-    order: 4;
+  /* Main panels grid spans both columns to match history panel width */
+  .main-panels-grid {
+    order: 2;
+    grid-column: 1 / -1;
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 1.5rem;
+    margin-bottom: 1rem;
   }
-  
+
   /* Live stats spans both columns */
   .live-stats-panel {
-    order: 5;
+    order: 3;
+    grid-column: 1 / -1;
+  }
+  
+  /* History panel spans both columns */
+  .history-panel {
+    order: 4;
     grid-column: 1 / -1;
   }
   
