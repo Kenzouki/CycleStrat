@@ -182,12 +182,6 @@
                 </div>
             </section>
 
-            <!-- Risk Warning (moved out of session controls) -->
-            <div class="risk-warning" id="riskWarning" style="display: none;">
-                <i class="fas fa-exclamation-triangle"></i>
-                <span id="riskWarningText"></span>
-            </div>
-
             <!-- Side-by-side layout for Betting and Sequence panels -->
             <div class="main-panels-grid" id="mainPanelsGrid" style="display: none;">
                 <!-- Betting Panel -->
@@ -196,6 +190,12 @@
                         <h2><i class="fas fa-dice"></i> Place Your Bet</h2>
                     </div>
                     <div class="panel-content">
+                        <!-- Risk Warning inside betting panel -->
+                        <div class="risk-warning" id="riskWarning" style="display: none;">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            <span id="riskWarningText"></span>
+                        </div>
+                        
                         <div class="bet-info">
                             <div class="bet-amount">
                                 <span class="bet-label">Next Bet Size</span>
@@ -239,6 +239,18 @@
                 <section class="panel sequence-panel" id="sequencePanel">
                     <div class="panel-header">
                         <h2><i class="fas fa-list-ol"></i> Cycle Sequences</h2>
+                        <div class="panel-actions">
+                            <div class="sequence-controls">
+                                <button class="btn btn-small" id="sortCurrentCycle" title="Sort current cycle from lowest to highest">
+                                    <i class="fas fa-sort-numeric-up"></i> Sort
+                                </button>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="autoSort" title="Automatically sort sequence after each bet">
+                                    <span class="checkmark"></span>
+                                    Auto Sort
+                                </label>
+                            </div>
+                        </div>
                     </div>
                     <div class="panel-content">
                         <div class="sequence-container" id="sequenceContainer">

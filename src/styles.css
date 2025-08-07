@@ -288,11 +288,19 @@ body {
 /* Ensure all direct children of main-content align properly */
 .main-content > .panel,
 .main-content > .main-panels-grid,
-.main-content > .full-width-panel,
-.main-content > .risk-warning {
+.main-content > .full-width-panel {
   width: 100%;
   box-sizing: border-box;
   /* Ensure no margins that could cause misalignment */
+  margin-left: 0;
+  margin-right: 0;
+}
+
+/* Risk warning inside betting panel */
+.betting-panel .risk-warning {
+  width: 100%;
+  box-sizing: border-box;
+  margin-bottom: 1rem;
   margin-left: 0;
   margin-right: 0;
 }
@@ -337,6 +345,12 @@ body {
 .panel-actions {
   display: flex;
   gap: 0.5rem;
+  align-items: center;
+}
+
+.sequence-controls {
+  display: flex;
+  gap: 1rem;
   align-items: center;
 }
 
@@ -476,6 +490,12 @@ body {
 
 .btn:not(:disabled):active {
   transform: translateY(0);
+}
+
+.btn-small {
+  padding: 0.5rem 1rem;
+  font-size: var(--font-size-xs);
+  min-height: 2rem;
 }
 
 .btn-primary {
