@@ -47,6 +47,9 @@
                     <button class="btn btn-icon" id="themeToggle" title="Toggle Dark Theme">
                         <i class="fas fa-moon"></i>
                     </button>
+                    <button class="btn btn-icon" id="analyticsBtn" title="Performance Analytics">
+                        <i class="fas fa-chart-bar"></i>
+                    </button>
                     <button class="btn btn-icon" id="bankrollBtn" title="Bankroll Manager">
                         <i class="fas fa-wallet"></i>
                     </button>
@@ -431,6 +434,188 @@
                     </div>
                 </div>
             </section>
+
+            <!-- Performance Analytics Panel -->
+            <section class="panel analytics-panel full-width-panel" id="analyticsPanel" style="display: none;">
+                <div class="panel-header">
+                    <h2><i class="fas fa-chart-bar"></i> Performance Analytics</h2>
+                    <div class="panel-actions">
+                        <div class="view-toggle">
+                            <button class="btn btn-toggle active" id="dashboardViewBtn" data-view="dashboard">
+                                <i class="fas fa-chart-line"></i> Dashboard
+                            </button>
+                            <button class="btn btn-toggle" id="calendarViewBtn" data-view="calendar">
+                                <i class="fas fa-calendar"></i> Calendar
+                            </button>
+                        </div>
+                        <button class="btn btn-icon" id="closeAnalytics">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="panel-content">
+                    <!-- Dashboard View -->
+                    <div class="analytics-view" id="dashboardView">
+                        <!-- Filters -->
+                        <div class="analytics-filters">
+                            <div class="filter-group">
+                                <label for="dateRangeFilter">Date Range</label>
+                                <select id="dateRangeFilter" class="form-control">
+                                    <option value="7">Last 7 days</option>
+                                    <option value="30" selected>Last 30 days</option>
+                                    <option value="90">Last 90 days</option>
+                                    <option value="365">Last year</option>
+                                    <option value="all">All time</option>
+                                    <option value="custom">Custom range</option>
+                                </select>
+                            </div>
+                            <div class="filter-group date-inputs" id="customDateInputs" style="display: none;">
+                                <label for="startDate">From</label>
+                                <input type="date" id="startDate" class="form-control">
+                                <label for="endDate">To</label>
+                                <input type="date" id="endDate" class="form-control">
+                            </div>
+                            <div class="filter-group">
+                                <label for="gameFilter">Game Type</label>
+                                <select id="gameFilter" class="form-control">
+                                    <option value="">All games</option>
+                                    <option value="roulette">Roulette</option>
+                                    <option value="baccarat">Baccarat</option>
+                                    <option value="blackjack">Blackjack</option>
+                                    <option value="craps">Craps</option>
+                                    <option value="mines">MINES</option>
+                                    <option value="dice">DICE</option>
+                                    <option value="limbo">LIMBO</option>
+                                    <option value="crash">CRASH</option>
+                                    <option value="flip">FLIP</option>
+                                    <option value="other">Other</option>
+                                </select>
+                            </div>
+                            <div class="filter-group">
+                                <label for="casinoFilter">Casino</label>
+                                <select id="casinoFilter" class="form-control">
+                                    <option value="">All casinos</option>
+                                </select>
+                            </div>
+                            <div class="filter-actions">
+                                <button class="btn btn-primary" id="applyFilters">Apply Filters</button>
+                                <button class="btn btn-secondary" id="resetFilters">Reset</button>
+                            </div>
+                        </div>
+
+                        <!-- Equity Curve Chart -->
+                        <div class="chart-container">
+                            <canvas id="equityCurveChart" width="800" height="400"></canvas>
+                        </div>
+
+                        <!-- Performance Statistics Table -->
+                        <div class="performance-stats">
+                            <h3>Performance Summary</h3>
+                            <div class="stats-grid">
+                                <div class="stat-card">
+                                    <div class="stat-value" id="totalSessions">0</div>
+                                    <div class="stat-label">Total Sessions</div>
+                                </div>
+                                <div class="stat-card">
+                                    <div class="stat-value" id="completedSessions">0</div>
+                                    <div class="stat-label">Completed Sessions</div>
+                                </div>
+                                <div class="stat-card">
+                                    <div class="stat-value" id="totalProfit">$0.00</div>
+                                    <div class="stat-label">Total Profit/Loss</div>
+                                </div>
+                                <div class="stat-card">
+                                    <div class="stat-value" id="avgSessionProfit">$0.00</div>
+                                    <div class="stat-label">Avg Session P/L</div>
+                                </div>
+                                <div class="stat-card">
+                                    <div class="stat-value" id="totalWagered">$0.00</div>
+                                    <div class="stat-label">Total Wagered</div>
+                                </div>
+                                <div class="stat-card">
+                                    <div class="stat-value" id="winRate">0%</div>
+                                    <div class="stat-label">Win Rate</div>
+                                </div>
+                                <div class="stat-card">
+                                    <div class="stat-value" id="maxConsecutiveWins">0</div>
+                                    <div class="stat-label">Max Consecutive Wins</div>
+                                </div>
+                                <div class="stat-card">
+                                    <div class="stat-value" id="maxConsecutiveLosses">0</div>
+                                    <div class="stat-label">Max Consecutive Losses</div>
+                                </div>
+                                <div class="stat-card">
+                                    <div class="stat-value" id="avgSessionTime">00:00:00</div>
+                                    <div class="stat-label">Avg Session Duration</div>
+                                </div>
+                                <div class="stat-card">
+                                    <div class="stat-value" id="profitableSessions">0%</div>
+                                    <div class="stat-label">Profitable Sessions</div>
+                                </div>
+                                <div class="stat-card">
+                                    <div class="stat-value" id="largestWin">$0.00</div>
+                                    <div class="stat-label">Largest Win</div>
+                                </div>
+                                <div class="stat-card">
+                                    <div class="stat-value" id="largestLoss">$0.00</div>
+                                    <div class="stat-label">Largest Loss</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Calendar View -->
+                    <div class="analytics-view" id="calendarView" style="display: none;">
+                        <div class="calendar-header">
+                            <button class="btn btn-icon" id="prevMonth">
+                                <i class="fas fa-chevron-left"></i>
+                            </button>
+                            <h3 id="currentMonth">January 2024</h3>
+                            <button class="btn btn-icon" id="nextMonth">
+                                <i class="fas fa-chevron-right"></i>
+                            </button>
+                        </div>
+                        
+                        <div class="calendar-container">
+                            <div class="calendar-grid">
+                                <div class="calendar-header-row">
+                                    <div class="calendar-day-header">Sun</div>
+                                    <div class="calendar-day-header">Mon</div>
+                                    <div class="calendar-day-header">Tue</div>
+                                    <div class="calendar-day-header">Wed</div>
+                                    <div class="calendar-day-header">Thu</div>
+                                    <div class="calendar-day-header">Fri</div>
+                                    <div class="calendar-day-header">Sat</div>
+                                </div>
+                                <div class="calendar-days" id="calendarDays">
+                                    <!-- Calendar days will be populated here -->
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="calendar-summary">
+                            <div class="summary-card">
+                                <h4 id="monthlyTitle">January 2024 Summary</h4>
+                                <div class="monthly-stats">
+                                    <div class="monthly-stat">
+                                        <span class="stat-label">Total P/L:</span>
+                                        <span class="stat-value" id="monthlyProfit">$0.00</span>
+                                    </div>
+                                    <div class="monthly-stat">
+                                        <span class="stat-label">Sessions:</span>
+                                        <span class="stat-value" id="monthlySessions">0</span>
+                                    </div>
+                                    <div class="monthly-stat">
+                                        <span class="stat-label">Avg per day:</span>
+                                        <span class="stat-value" id="monthlyAvgPerDay">$0.00</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
             </div>
         </main>
 
@@ -782,6 +967,107 @@
                 <div class="modal-actions">
                     <button class="btn btn-secondary" id="skipBalanceUpdate">Skip</button>
                     <button class="btn btn-primary" id="confirmBalanceUpdate">Update Balance</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Session Detail Modal -->
+        <div class="modal-overlay" id="sessionDetailOverlay" style="display: none;">
+            <div class="modal session-detail-modal">
+                <div class="modal-header">
+                    <h3 id="sessionDetailTitle">Session Details</h3>
+                    <button class="btn btn-icon" id="sessionDetailClose">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-content">
+                    <div class="session-detail-content">
+                        <!-- Session Info -->
+                        <div class="session-info">
+                            <h4>Session Information</h4>
+                            <div class="info-grid">
+                                <div class="info-item">
+                                    <span class="info-label">Session Name:</span>
+                                    <span class="info-value" id="detailSessionName">-</span>
+                                </div>
+                                <div class="info-item">
+                                    <span class="info-label">Casino:</span>
+                                    <span class="info-value" id="detailCasino">-</span>
+                                </div>
+                                <div class="info-item">
+                                    <span class="info-label">Game Type:</span>
+                                    <span class="info-value" id="detailGameType">-</span>
+                                </div>
+                                <div class="info-item">
+                                    <span class="info-label">Duration:</span>
+                                    <span class="info-value" id="detailDuration">-</span>
+                                </div>
+                                <div class="info-item">
+                                    <span class="info-label">Final P/L:</span>
+                                    <span class="info-value" id="detailProfitLoss">-</span>
+                                </div>
+                                <div class="info-item">
+                                    <span class="info-label">Total Bets:</span>
+                                    <span class="info-value" id="detailTotalBets">-</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Session Chart -->
+                        <div class="session-chart">
+                            <h4>Session P/L Chart</h4>
+                            <canvas id="sessionDetailChart" width="600" height="300"></canvas>
+                        </div>
+
+                        <!-- Session Statistics -->
+                        <div class="session-stats">
+                            <h4>Session Statistics</h4>
+                            <div class="stats-grid">
+                                <div class="stat-item">
+                                    <span class="stat-label">Win Rate:</span>
+                                    <span class="stat-value" id="detailWinRate">-</span>
+                                </div>
+                                <div class="stat-item">
+                                    <span class="stat-label">Total Wagered:</span>
+                                    <span class="stat-value" id="detailTotalWagered">-</span>
+                                </div>
+                                <div class="stat-item">
+                                    <span class="stat-label">Consecutive Wins:</span>
+                                    <span class="stat-value" id="detailConsecutiveWins">-</span>
+                                </div>
+                                <div class="stat-item">
+                                    <span class="stat-label">Consecutive Losses:</span>
+                                    <span class="stat-value" id="detailConsecutiveLosses">-</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-actions">
+                    <button class="btn btn-secondary" id="sessionDetailCancel">Close</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Session Selection Modal -->
+        <div class="modal-overlay" id="sessionSelectionOverlay" style="display: none;">
+            <div class="modal session-selection-modal">
+                <div class="modal-header">
+                    <h3 id="sessionSelectionTitle">Select Session</h3>
+                    <button class="btn btn-icon" id="sessionSelectionClose">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-content">
+                    <div class="session-selection-content">
+                        <p id="sessionSelectionMessage">Multiple sessions found for this day. Select which session to view:</p>
+                        <div class="session-list" id="sessionList">
+                            <!-- Session items will be dynamically populated -->
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-actions">
+                    <button class="btn btn-secondary" id="sessionSelectionCancel">Cancel</button>
                 </div>
             </div>
         </div>

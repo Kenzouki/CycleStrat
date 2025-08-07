@@ -27,6 +27,7 @@ interface SessionMetadata {
   selectedPotId?: string; // For bankroll manager integration
   totalBets: number;
   isSessionPaused: boolean;
+  isManuallyEnded: boolean;
 }
 
 interface SessionData {
@@ -81,6 +82,13 @@ class LabouchereApp {
   private maxConsecutiveWins = 0;
   private maxConsecutiveLosses = 0;
   private currentStreak = 0; // positive for wins, negative for losses
+
+  // Analytics properties
+  private equityCurveChart: any = null;
+  private sessionDetailChart: any = null;
+  private currentAnalyticsView: 'dashboard' | 'calendar' = 'dashboard';
+  private currentCalendarMonth = new Date();
+  private filteredSessions: SessionFile[] = [];
 
   constructor() {
     this.authManager = new AuthManager();
@@ -140,7 +148,14 @@ class LabouchereApp {
       'setupGuideClose', 'setupGuideOk', 'balanceUpdateOverlay', 'balanceUpdateClose', 
       'appCurrentBalance', 'actualBalance', 'balanceDifference', 'skipBalanceUpdate', 'confirmBalanceUpdate',
       'reshuffleCycles', 'reshuffleOverlay', 'reshuffleClose', 'remainingSum', 'newCycleCount',
-      'cyclePreview', 'valuePerCycle', 'cycleValuePreview', 'reshuffleCancel', 'reshuffleConfirm'
+      'cyclePreview', 'valuePerCycle', 'cycleValuePreview', 'reshuffleCancel', 'reshuffleConfirm',
+      'analyticsBtn', 'analyticsPanel', 'closeAnalytics', 'dashboardViewBtn', 'calendarViewBtn',
+      'dashboardView', 'calendarView', 'dateRangeFilter', 'customDateInputs', 'startDate', 'endDate',
+      'gameFilter', 'casinoFilter', 'applyFilters', 'resetFilters', 'equityCurveChart',
+      'prevMonth', 'nextMonth', 'currentMonth', 'calendarDays', 'monthlyTitle', 'monthlyProfit',
+      'monthlySessions', 'monthlyAvgPerDay', 'sessionDetailOverlay', 'sessionDetailClose',
+      'sessionDetailTitle', 'sessionDetailChart', 'sessionDetailCancel',
+      'sessionSelectionOverlay', 'sessionSelectionClose', 'sessionSelectionCancel', 'sessionList'
     ];
 
     elementIds.forEach(id => {
@@ -246,6 +261,31 @@ class LabouchereApp {
     this.elements.reshuffleOverlay?.addEventListener('click', (e) => {
       if (e.target === this.elements.reshuffleOverlay) this.closeReshuffleModal();
     });
+
+    // Analytics handlers
+    this.elements.analyticsBtn?.addEventListener('click', async () => await this.showAnalytics());
+    this.elements.closeAnalytics?.addEventListener('click', () => this.closeAnalytics());
+    this.elements.dashboardViewBtn?.addEventListener('click', () => this.switchAnalyticsView('dashboard'));
+    this.elements.calendarViewBtn?.addEventListener('click', () => this.switchAnalyticsView('calendar'));
+    this.elements.dateRangeFilter?.addEventListener('change', () => this.handleDateRangeChange());
+    this.elements.applyFilters?.addEventListener('click', async () => await this.applyAnalyticsFilters());
+    this.elements.resetFilters?.addEventListener('click', async () => await this.resetAnalyticsFilters());
+    this.elements.prevMonth?.addEventListener('click', () => this.navigateMonth(-1));
+    this.elements.nextMonth?.addEventListener('click', () => this.navigateMonth(1));
+    
+    // Session detail modal handlers
+    this.elements.sessionDetailClose?.addEventListener('click', () => this.closeSessionDetail());
+    this.elements.sessionDetailCancel?.addEventListener('click', () => this.closeSessionDetail());
+    this.elements.sessionDetailOverlay?.addEventListener('click', (e) => {
+      if (e.target === this.elements.sessionDetailOverlay) this.closeSessionDetail();
+    });
+
+    // Session selection modal handlers
+    this.elements.sessionSelectionClose?.addEventListener('click', () => this.closeSessionSelection());
+    this.elements.sessionSelectionCancel?.addEventListener('click', () => this.closeSessionSelection());
+    this.elements.sessionSelectionOverlay?.addEventListener('click', (e) => {
+      if (e.target === this.elements.sessionSelectionOverlay) this.closeSessionSelection();
+    });
   }
 
   // Session Management Methods
@@ -345,6 +385,7 @@ class LabouchereApp {
         totalWins: 0,
         totalBets: 0,
         isSessionPaused: false,
+        isManuallyEnded: false,
         selectedPotId: (this.elements.selectedPot as HTMLSelectElement).value || undefined
       },
       data: {
@@ -517,6 +558,9 @@ class LabouchereApp {
     const select = this.elements.savedSessions as HTMLSelectElement;
     if (!select) return;
 
+    // Store current selection
+    const currentValue = select.value;
+
     // Clear existing options except the first one
     select.innerHTML = '<option value="">Select a saved session...</option>';
 
@@ -529,12 +573,65 @@ class LabouchereApp {
     // Combine and deduplicate
     const allSessions = [...new Set([...localSessions, ...cloudSessions])].sort();
     
-    allSessions.forEach(session => {
-      const option = document.createElement('option');
-      option.value = session;
-      option.textContent = session;
-      select.appendChild(option);
-    });
+    // Process sessions asynchronously to prioritize cloud data
+    for (const sessionName of allSessions) {
+      try {
+        let session: SessionFile | null = null;
+        
+        // Try to load from cloud first (single source of truth for completion status)
+        try {
+          const cloudStorage = await this.authManager.getCloudStorage();
+          const isSignedIn = await cloudStorage.isSignedIn();
+          if (isSignedIn) {
+            const cloudResult = await cloudStorage.loadSession(sessionName);
+            if (cloudResult.success && cloudResult.data) {
+              session = cloudResult.data as unknown as SessionFile;
+            }
+          }
+        } catch (cloudError) {
+          console.warn(`Failed to load ${sessionName} from cloud, trying localStorage:`, cloudError);
+        }
+        
+        // Fall back to localStorage only if cloud load failed or user not signed in
+        if (!session) {
+          const sessionData = localStorage.getItem(`labouchere_session_${sessionName}`);
+          if (sessionData) {
+            session = JSON.parse(sessionData);
+          }
+        }
+        
+        const option = document.createElement('option');
+        option.value = sessionName;
+        
+        if (session) {
+          // Mark completed sessions using cloud data as source of truth
+          const isCompleted = this.isSessionCompleted(session);
+          const completedIndicator = isCompleted ? ' ✓' : '';
+          option.textContent = `${sessionName}${completedIndicator}`;
+          
+          // Add visual styling for completed sessions
+          if (isCompleted) {
+            option.style.fontWeight = 'bold';
+            option.style.color = '#4CAF50';
+          }
+        } else {
+          // Fallback for sessions that couldn't be loaded from either source
+          option.textContent = sessionName;
+        }
+        
+        select.appendChild(option);
+      } catch (error) {
+        console.error(`Error processing session ${sessionName} for dropdown:`, error);
+        // Still add the option even if we can't determine completion status
+        const option = document.createElement('option');
+        option.value = sessionName;
+        option.textContent = sessionName;
+        select.appendChild(option);
+      }
+    }
+
+    // Restore selection
+    select.value = currentValue;
 
     // Update button states
     const hasSessions = allSessions.length > 0;
@@ -573,7 +670,7 @@ class LabouchereApp {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `labouchere-sessions-${new Date().toISOString().split('T')[0]}.json`;
+    a.download = `labouchere-sessions-${this.formatDateToLocalString(new Date())}.json`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -840,30 +937,145 @@ class LabouchereApp {
   private togglePauseResume(): void {
     if (!this.isSessionActive) return;
 
-    this.isSessionPaused = !this.isSessionPaused;
-    const pauseButton = this.elements.pauseSession;
-    const icon = pauseButton?.querySelector('i');
-    
-    if (this.isSessionPaused) {
-      this.stopSessionTimer();
-      if (pauseButton) pauseButton.innerHTML = '<i class="fas fa-play"></i>';
-      if (icon) icon.className = 'fas fa-play';
-      this.showToast('Session paused', 'info');
-      
-      // Prompt for balance update when pausing
-      setTimeout(() => {
-        this.showBalanceUpdate('session pause');
-      }, 500);
+    if (!this.isSessionPaused) {
+      // Pausing the session - ask if user wants to end it
+      this.pauseSessionAndPrompt();
     } else {
-      this.startSessionTimer();
-      if (pauseButton) pauseButton.innerHTML = '<i class="fas fa-pause"></i>';
-      if (icon) icon.className = 'fas fa-pause';
-      this.showToast('Session resumed', 'info');
+      // Resuming the session
+      this.resumeSession();
     }
+  }
+
+  private pauseSessionAndPrompt(): void {
+    this.isSessionPaused = true;
+    const pauseButton = this.elements.pauseSession;
+    
+    this.stopSessionTimer();
+    if (pauseButton) pauseButton.innerHTML = '<i class="fas fa-play"></i>';
+    this.showToast('Session paused', 'info');
 
     if (this.currentSession) {
       this.currentSession.metadata.isSessionPaused = this.isSessionPaused;
     }
+
+    // Show dialog asking if user wants to end session
+    setTimeout(() => {
+      this.showEndSessionDialog();
+    }, 500);
+  }
+
+  private resumeSession(): void {
+    this.isSessionPaused = false;
+    const pauseButton = this.elements.pauseSession;
+    
+    this.startSessionTimer();
+    if (pauseButton) pauseButton.innerHTML = '<i class="fas fa-pause"></i>';
+    this.showToast('Session resumed', 'info');
+
+    if (this.currentSession) {
+      this.currentSession.metadata.isSessionPaused = this.isSessionPaused;
+    }
+  }
+
+  private showEndSessionDialog(): void {
+    const modal = document.createElement('div');
+    modal.className = 'modal';
+    modal.innerHTML = `
+      <div class="modal-content">
+        <h3>Session Paused</h3>
+        <p>Your session is now paused. What would you like to do?</p>
+        <div class="modal-buttons">
+          <button id="continueSession" class="btn btn-primary">Continue Later</button>
+          <button id="endSession" class="btn btn-secondary">End Session</button>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    const continueBtn = modal.querySelector('#continueSession');
+    const endBtn = modal.querySelector('#endSession');
+
+    continueBtn?.addEventListener('click', () => {
+      document.body.removeChild(modal);
+      // Session remains paused, no further action needed
+    });
+
+    endBtn?.addEventListener('click', () => {
+      document.body.removeChild(modal);
+      this.showBalanceReconciliationDialog();
+    });
+  }
+
+  private showBalanceReconciliationDialog(): void {
+    if (!this.currentSession) return;
+
+    const currentBalance = this.currentSession.data.balance;
+    
+    const modal = document.createElement('div');
+    modal.className = 'modal';
+    modal.innerHTML = `
+      <div class="modal-content">
+        <h3>Balance Reconciliation</h3>
+        <p>Please verify your actual casino balance and update if needed.</p>
+        <div class="form-group">
+          <label for="actualBalance">Current balance in casino:</label>
+          <input type="number" id="actualBalance" step="0.01" value="${currentBalance.toFixed(2)}" class="form-control">
+        </div>
+        <p><small>App balance: ${this.formatCurrency(currentBalance)}</small></p>
+        <div class="modal-buttons">
+          <button id="cancelEnd" class="btn btn-secondary">Cancel</button>
+          <button id="confirmEnd" class="btn btn-primary">End Session</button>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    const actualBalanceInput = modal.querySelector('#actualBalance') as HTMLInputElement;
+    const cancelBtn = modal.querySelector('#cancelEnd');
+    const confirmBtn = modal.querySelector('#confirmEnd');
+
+    cancelBtn?.addEventListener('click', () => {
+      document.body.removeChild(modal);
+      // Keep session paused, don't end it
+    });
+
+    confirmBtn?.addEventListener('click', () => {
+      const actualBalance = parseFloat(actualBalanceInput.value) || currentBalance;
+      const balanceDifference = actualBalance - currentBalance;
+      
+      // Update balance if there's a discrepancy
+      if (Math.abs(balanceDifference) > 0.01) {
+        this.currentSession!.data.balance = actualBalance;
+        this.currentSession!.data.totalProfit += balanceDifference;
+        
+        this.showToast(
+          `Balance updated by ${this.formatCurrency(balanceDifference)}`, 
+          balanceDifference > 0 ? 'success' : 'warning'
+        );
+      }
+
+      // Mark session as manually ended
+      this.currentSession!.metadata.isManuallyEnded = true;
+      this.endSessionManually();
+      
+      document.body.removeChild(modal);
+    });
+
+    // Focus on input and select text
+    setTimeout(() => actualBalanceInput.focus(), 100);
+  }
+
+  private endSessionManually(): void {
+    if (!this.currentSession) return;
+    
+    const totalProfit = this.currentSession.data.totalProfit;
+    const profitMessage = totalProfit >= 0 ? 
+      `Session ended with profit: ${this.formatCurrency(totalProfit)}` :
+      `Session ended with loss: ${this.formatCurrency(Math.abs(totalProfit))}`;
+    
+    this.endSession('Manual End', profitMessage);
   }
 
   private endSession(reason: string, message: string): void {
@@ -1777,6 +1989,14 @@ class LabouchereApp {
     this.setElementText('sessionDurationHeader', timeString);
   }
 
+  private formatDuration(durationInSeconds: number): string {
+    const hours = Math.floor(durationInSeconds / 3600);
+    const minutes = Math.floor((durationInSeconds % 3600) / 60);
+    const seconds = Math.floor(durationInSeconds % 60);
+
+    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+  }
+
   // Helper Methods for Cycle Management
   private startNextCycle(): void {
     if (!this.currentSession) return;
@@ -1849,6 +2069,7 @@ class LabouchereApp {
     this.isSessionActive = true;
     this.sessionDuration = metadata.sessionDuration;
     this.isSessionPaused = false; // Always resume loaded sessions
+    metadata.isManuallyEnded = false; // Reset manual end flag when resuming
     
     // Migrate legacy session data if needed
     const data = this.currentSession.data;
@@ -1860,6 +2081,11 @@ class LabouchereApp {
     }
     if (data.currentStreak === undefined) {
       data.currentStreak = 0;
+    }
+    
+    // Migrate legacy metadata if needed
+    if (metadata.isManuallyEnded === undefined) {
+      metadata.isManuallyEnded = false;
     }
     
     // Sync loaded stats with class properties
@@ -2951,6 +3177,792 @@ class LabouchereApp {
     // Close modal and show success message
     this.closeReshuffleModal();
     this.showToast(`Cycles reshuffled successfully. Created ${newCycleCount} new cycles.`, 'success');
+  }
+
+  // Analytics Methods
+  private async showAnalytics(): Promise<void> {
+    // Hide other panels by finding them by class name
+    const sessionPanel = document.querySelector('.session-panel') as HTMLElement;
+    const mainPanelsGrid = this.elements.mainPanelsGrid as HTMLElement;
+    const liveStatsPanel = this.elements.liveStatsPanel as HTMLElement;
+    const historyPanel = this.elements.historyPanel as HTMLElement;
+    
+    if (sessionPanel) sessionPanel.style.display = 'none';
+    if (mainPanelsGrid) mainPanelsGrid.style.display = 'none';
+    if (liveStatsPanel) liveStatsPanel.style.display = 'none';
+    if (historyPanel) historyPanel.style.display = 'none';
+
+    // Show analytics panel
+    this.showElement('analyticsPanel');
+
+    // Initialize analytics data
+    await this.initializeAnalytics();
+  }
+
+  private closeAnalytics(): void {
+    this.hideElement('analyticsPanel');
+    
+    // Show the session panel again
+    const sessionPanel = document.querySelector('.session-panel') as HTMLElement;
+    if (sessionPanel) sessionPanel.style.display = 'block';
+    
+    // If there's an active session, show the appropriate panels
+    if (this.isSessionActive) {
+      this.showElement('mainPanelsGrid');
+      this.showElement('liveStatsPanel');
+      this.showElement('historyPanel');
+    }
+  }
+
+  private switchAnalyticsView(view: 'dashboard' | 'calendar'): void {
+    this.currentAnalyticsView = view;
+    
+    // Update button states
+    const dashboardBtn = this.elements.dashboardViewBtn;
+    const calendarBtn = this.elements.calendarViewBtn;
+    
+    if (dashboardBtn && calendarBtn) {
+      dashboardBtn.classList.toggle('active', view === 'dashboard');
+      calendarBtn.classList.toggle('active', view === 'calendar');
+    }
+    
+    // Show/hide views
+    const dashboardView = this.elements.dashboardView;
+    const calendarView = this.elements.calendarView;
+    
+    if (dashboardView && calendarView) {
+      dashboardView.style.display = view === 'dashboard' ? 'block' : 'none';
+      calendarView.style.display = view === 'calendar' ? 'block' : 'none';
+    }
+    
+    // Initialize the appropriate view
+    if (view === 'dashboard') {
+      this.initializeDashboard();
+    } else {
+      this.initializeCalendar();
+    }
+  }
+
+  private async initializeAnalytics(): Promise<void> {
+    // Load all completed sessions from cloud (single source of truth)
+    this.filteredSessions = await this.getCompletedSessions();
+    
+    // Populate casino filter
+    this.populateCasinoFilter();
+    
+    // Initialize dashboard view by default
+    this.switchAnalyticsView('dashboard');
+  }
+
+  private async getCompletedSessions(): Promise<SessionFile[]> {
+    const allSessions = [...this.getSavedSessions(), ...(await this.getCloudSessions())];
+    // Remove duplicates
+    const uniqueSessionNames = [...new Set(allSessions)];
+    const completedSessions: SessionFile[] = [];
+    
+    for (const sessionName of uniqueSessionNames) {
+      try {
+        let session: SessionFile | null = null;
+        
+        // Try to load from cloud first (single source of truth for completion status)
+        try {
+          const cloudStorage = await this.authManager.getCloudStorage();
+          const isSignedIn = await cloudStorage.isSignedIn();
+          if (isSignedIn) {
+            const cloudResult = await cloudStorage.loadSession(sessionName);
+            if (cloudResult.success && cloudResult.data) {
+              session = cloudResult.data as unknown as SessionFile;
+            }
+          }
+        } catch (cloudError) {
+          console.warn(`Failed to load ${sessionName} from cloud for analytics, trying localStorage:`, cloudError);
+        }
+        
+        // Fall back to localStorage only if cloud load failed or user not signed in
+        if (!session) {
+          const sessionData = localStorage.getItem(`labouchere_session_${sessionName}`);
+          if (sessionData) {
+            session = JSON.parse(sessionData);
+          }
+        }
+        
+        if (session && this.isSessionCompleted(session)) {
+          completedSessions.push(session);
+        }
+      } catch (error) {
+        console.error(`Error loading session ${sessionName}:`, error);
+      }
+    }
+    
+    return completedSessions.sort((a, b) => 
+      new Date(a.metadata.sessionStartTime).getTime() - new Date(b.metadata.sessionStartTime).getTime()
+    );
+  }
+
+  private isSessionCompleted(session: SessionFile): boolean {
+    const metadata = session.metadata;
+    const data = session.data;
+    
+    // Session is completed if:
+    // 1. Profit goal was reached
+    const profitGoalReached = data.totalProfit >= metadata.profitGoal;
+    
+    // 2. Stop loss was hit
+    const stopLossHit = data.balance <= (metadata.startingBankroll - metadata.stopLoss);
+    
+    // 3. All cycles were completed successfully (balance went up and all sequences empty)
+    const allSequencesEmpty = data.allCycleSequences.every((cycle: number[]) => cycle.length === 0);
+    const hadBettingActivity = session.history.length > 0;
+    const allCyclesCompleted = allSequencesEmpty && hadBettingActivity && data.totalProfit > 0;
+    
+    // 4. Session was manually ended by user
+    const manuallyEnded = metadata.isManuallyEnded;
+    
+    return profitGoalReached || stopLossHit || allCyclesCompleted || manuallyEnded;
+  }
+
+  private populateCasinoFilter(): void {
+    const casinoFilter = this.elements.casinoFilter as HTMLSelectElement;
+    if (!casinoFilter) return;
+    
+    // Get unique casinos
+    const casinos = new Set<string>();
+    this.filteredSessions.forEach(session => {
+      if (session.metadata.casinoName.trim()) {
+        casinos.add(session.metadata.casinoName);
+      }
+    });
+    
+    // Clear existing options except "All casinos"
+    casinoFilter.innerHTML = '<option value="">All casinos</option>';
+    
+    // Add casino options
+    Array.from(casinos).sort().forEach(casino => {
+      const option = document.createElement('option');
+      option.value = casino;
+      option.textContent = casino;
+      casinoFilter.appendChild(option);
+    });
+  }
+
+  private handleDateRangeChange(): void {
+    const dateRangeFilter = this.elements.dateRangeFilter as HTMLSelectElement;
+    const customDateInputs = this.elements.customDateInputs;
+    
+    if (dateRangeFilter && customDateInputs) {
+      const showCustomInputs = dateRangeFilter.value === 'custom';
+      customDateInputs.style.display = showCustomInputs ? 'flex' : 'none';
+    }
+  }
+
+  private async applyAnalyticsFilters(): Promise<void> {
+    const dateRangeFilter = this.elements.dateRangeFilter as HTMLSelectElement;
+    const gameFilter = this.elements.gameFilter as HTMLSelectElement;
+    const casinoFilter = this.elements.casinoFilter as HTMLSelectElement;
+    const startDate = this.elements.startDate as HTMLInputElement;
+    const endDate = this.elements.endDate as HTMLInputElement;
+    
+    let filtered = await this.getCompletedSessions();
+    
+    // Apply date filter
+    if (dateRangeFilter.value !== 'all') {
+      const now = new Date();
+      let startRange: Date;
+      
+      if (dateRangeFilter.value === 'custom') {
+        if (startDate.value) {
+          startRange = new Date(startDate.value);
+        } else {
+          startRange = new Date(0); // Beginning of time
+        }
+        
+        const endRange = endDate.value ? new Date(endDate.value) : now;
+        
+        filtered = filtered.filter(session => {
+          const sessionDate = new Date(session.metadata.sessionStartTime);
+          return sessionDate >= startRange && sessionDate <= endRange;
+        });
+      } else {
+        const days = parseInt(dateRangeFilter.value);
+        startRange = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
+        
+        filtered = filtered.filter(session => {
+          const sessionDate = new Date(session.metadata.sessionStartTime);
+          return sessionDate >= startRange;
+        });
+      }
+    }
+    
+    // Apply game filter
+    if (gameFilter.value) {
+      filtered = filtered.filter(session => session.metadata.gameType === gameFilter.value);
+    }
+    
+    // Apply casino filter
+    if (casinoFilter.value) {
+      filtered = filtered.filter(session => session.metadata.casinoName === casinoFilter.value);
+    }
+    
+    this.filteredSessions = filtered;
+    
+    // Refresh current view
+    if (this.currentAnalyticsView === 'dashboard') {
+      this.initializeDashboard();
+    } else {
+      this.initializeCalendar();
+    }
+    
+    this.showToast(`Applied filters - ${filtered.length} sessions found`, 'info');
+  }
+
+  private async resetAnalyticsFilters(): Promise<void> {
+    // Reset all filter controls
+    const dateRangeFilter = this.elements.dateRangeFilter as HTMLSelectElement;
+    const gameFilter = this.elements.gameFilter as HTMLSelectElement;
+    const casinoFilter = this.elements.casinoFilter as HTMLSelectElement;
+    const startDate = this.elements.startDate as HTMLInputElement;
+    const endDate = this.elements.endDate as HTMLInputElement;
+    
+    if (dateRangeFilter) dateRangeFilter.value = '30';
+    if (gameFilter) gameFilter.value = '';
+    if (casinoFilter) casinoFilter.value = '';
+    if (startDate) startDate.value = '';
+    if (endDate) endDate.value = '';
+    
+    // Hide custom date inputs
+    this.handleDateRangeChange();
+    
+    // Reset filtered sessions
+    await this.applyAnalyticsFilters();
+  }
+
+  private initializeDashboard(): void {
+    this.createEquityCurve();
+    this.updatePerformanceStats();
+  }
+
+  private createEquityCurve(): void {
+    const canvas = this.elements.equityCurveChart as HTMLCanvasElement;
+    if (!canvas) return;
+
+    // Destroy existing chart
+    if (this.equityCurveChart) {
+      this.equityCurveChart.destroy();
+    }
+
+    // Prepare data for equity curve
+    const equityData = this.prepareEquityCurveData();
+    
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    this.equityCurveChart = new (window as any).Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: equityData.labels,
+        datasets: [{
+          label: 'Daily P/L',
+          data: equityData.values,
+          borderColor: '#4CAF50',
+          backgroundColor: 'rgba(76, 175, 80, 0.1)',
+          fill: true,
+          tension: 0.4,
+          pointRadius: 4,
+          pointHoverRadius: 6
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          x: {
+            title: {
+              display: true,
+              text: 'Date'
+            }
+          },
+          y: {
+            title: {
+              display: true,
+              text: 'Profit/Loss ($)'
+            },
+            grid: {
+              color: (ctx: any) => ctx.tick.value === 0 ? 'rgba(255, 255, 255, 0.3)' : 'rgba(255, 255, 255, 0.1)'
+            }
+          }
+        },
+        plugins: {
+          title: {
+            display: true,
+            text: 'Equity Curve vs Date'
+          },
+          legend: {
+            display: true,
+            position: 'top'
+          }
+        }
+      }
+    });
+  }
+
+  private prepareEquityCurveData(): { labels: string[], values: number[] } {
+    if (this.filteredSessions.length === 0) {
+      return { labels: [], values: [] };
+    }
+
+    // Group sessions by date and sum P/L
+    const dailyPL = new Map<string, number>();
+    
+    this.filteredSessions.forEach(session => {
+      const date = new Date(session.metadata.sessionStartTime);
+      const dateStr = this.formatDateToLocalString(date);
+      const currentPL = dailyPL.get(dateStr) || 0;
+      dailyPL.set(dateStr, currentPL + session.data.totalProfit);
+    });
+
+    // Convert to arrays and calculate cumulative P/L
+    const sortedEntries = Array.from(dailyPL.entries()).sort();
+    const labels: string[] = [];
+    const values: number[] = [];
+    let cumulative = 0;
+
+    sortedEntries.forEach(([date, pl]) => {
+      cumulative += pl;
+      labels.push(this.formatDateForChart(date));
+      values.push(cumulative);
+    });
+
+    return { labels, values };
+  }
+
+  private formatDateForChart(dateStr: string): string {
+    const date = new Date(dateStr);
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  }
+
+  private formatDateToLocalString(date: Date): string {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+
+  private updatePerformanceStats(): void {
+    if (this.filteredSessions.length === 0) {
+      this.clearPerformanceStats();
+      return;
+    }
+
+    const stats = this.calculatePerformanceStats();
+    
+    // Update all stat elements
+    this.updateStatElement('totalSessions', this.filteredSessions.length.toString());
+    this.updateStatElement('completedSessions', this.filteredSessions.length.toString());
+    this.updateStatElement('totalProfit', this.formatCurrency(stats.totalProfit));
+    this.updateStatElement('avgSessionProfit', this.formatCurrency(stats.avgSessionProfit));
+    this.updateStatElement('totalWagered', this.formatCurrency(stats.totalWagered));
+    this.updateStatElement('winRate', `${stats.winRate.toFixed(1)}%`);
+    this.updateStatElement('maxConsecutiveWins', stats.maxConsecutiveWins.toString());
+    this.updateStatElement('maxConsecutiveLosses', stats.maxConsecutiveLosses.toString());
+    this.updateStatElement('avgSessionTime', this.formatDuration(stats.avgSessionTime));
+    this.updateStatElement('profitableSessions', `${stats.profitableSessionsPercent.toFixed(1)}%`);
+    this.updateStatElement('largestWin', this.formatCurrency(stats.largestWin));
+    this.updateStatElement('largestLoss', this.formatCurrency(stats.largestLoss));
+  }
+
+  private calculatePerformanceStats() {
+    const stats = {
+      totalProfit: 0,
+      avgSessionProfit: 0,
+      totalWagered: 0,
+      winRate: 0,
+      maxConsecutiveWins: 0,
+      maxConsecutiveLosses: 0,
+      avgSessionTime: 0,
+      profitableSessionsPercent: 0,
+      largestWin: 0,
+      largestLoss: 0
+    };
+
+    if (this.filteredSessions.length === 0) return stats;
+
+    let totalWins = 0;
+    let totalBets = 0;
+    let totalDuration = 0;
+    let profitableSessions = 0;
+
+    this.filteredSessions.forEach(session => {
+      const profit = session.data.totalProfit;
+      stats.totalProfit += profit;
+      stats.totalWagered += session.metadata.totalAmountWagered;
+      totalWins += session.metadata.totalWins;
+      totalBets += session.metadata.totalBets;
+      totalDuration += session.metadata.sessionDuration;
+
+      if (profit > 0) {
+        profitableSessions++;
+        stats.largestWin = Math.max(stats.largestWin, profit);
+      } else if (profit < 0) {
+        stats.largestLoss = Math.min(stats.largestLoss, profit);
+      }
+
+      stats.maxConsecutiveWins = Math.max(stats.maxConsecutiveWins, session.data.maxConsecutiveWins);
+      stats.maxConsecutiveLosses = Math.max(stats.maxConsecutiveLosses, session.data.maxConsecutiveLosses);
+    });
+
+    stats.avgSessionProfit = stats.totalProfit / this.filteredSessions.length;
+    stats.winRate = totalBets > 0 ? (totalWins / totalBets) * 100 : 0;
+    stats.avgSessionTime = totalDuration / this.filteredSessions.length;
+    stats.profitableSessionsPercent = (profitableSessions / this.filteredSessions.length) * 100;
+
+    return stats;
+  }
+
+  private updateStatElement(elementId: string, value: string): void {
+    const element = document.getElementById(elementId);
+    if (element) {
+      element.textContent = value;
+      
+      // Add color coding for profit/loss values
+      if (elementId.includes('Profit') || elementId.includes('Win') || elementId.includes('Loss')) {
+        const numValue = parseFloat(value.replace(/[$,%]/g, ''));
+        if (!isNaN(numValue)) {
+          element.className = numValue > 0 ? 'stat-value positive' : 
+                             numValue < 0 ? 'stat-value negative' : 'stat-value';
+        }
+      }
+    }
+  }
+
+  private clearPerformanceStats(): void {
+    const statIds = [
+      'totalSessions', 'completedSessions', 'totalProfit', 'avgSessionProfit',
+      'totalWagered', 'winRate', 'maxConsecutiveWins', 'maxConsecutiveLosses',
+      'avgSessionTime', 'profitableSessions', 'largestWin', 'largestLoss'
+    ];
+    
+    statIds.forEach(id => this.updateStatElement(id, '0'));
+  }
+
+  private initializeCalendar(): void {
+    this.renderCalendar();
+  }
+
+  private navigateMonth(direction: number): void {
+    this.currentCalendarMonth.setMonth(this.currentCalendarMonth.getMonth() + direction);
+    this.renderCalendar();
+  }
+
+  private renderCalendar(): void {
+    const calendarDays = this.elements.calendarDays;
+    const currentMonth = this.elements.currentMonth;
+    const monthlyTitle = this.elements.monthlyTitle;
+    
+    if (!calendarDays || !currentMonth || !monthlyTitle) return;
+
+    // Update month display
+    const monthYear = this.currentCalendarMonth.toLocaleDateString('en-US', { 
+      month: 'long', 
+      year: 'numeric' 
+    });
+    currentMonth.textContent = monthYear;
+    monthlyTitle.textContent = `${monthYear} Summary`;
+
+    // Clear existing calendar days
+    calendarDays.innerHTML = '';
+
+    // Get first day of month and number of days
+    const firstDay = new Date(this.currentCalendarMonth.getFullYear(), this.currentCalendarMonth.getMonth(), 1);
+    const lastDay = new Date(this.currentCalendarMonth.getFullYear(), this.currentCalendarMonth.getMonth() + 1, 0);
+    const startDate = new Date(firstDay);
+    startDate.setDate(startDate.getDate() - firstDay.getDay()); // Start from Sunday
+
+    // Generate calendar data
+    const calendarData = this.generateCalendarData(firstDay, lastDay);
+    
+    // Create calendar cells
+    for (let i = 0; i < 42; i++) { // 6 weeks × 7 days
+      const cellDate = new Date(startDate);
+      cellDate.setDate(startDate.getDate() + i);
+      
+      const dayData = calendarData.get(this.formatDateToLocalString(cellDate));
+      const isCurrentMonth = cellDate.getMonth() === this.currentCalendarMonth.getMonth();
+      
+      const dayCell = this.createCalendarDay(cellDate, dayData, isCurrentMonth);
+      calendarDays.appendChild(dayCell);
+    }
+
+    // Update monthly summary
+    this.updateMonthlySummary(calendarData);
+  }
+
+  private generateCalendarData(firstDay: Date, lastDay: Date): Map<string, any> {
+    const calendarData = new Map();
+    
+    // Filter sessions for current month
+    const monthSessions = this.filteredSessions.filter(session => {
+      const sessionDate = new Date(session.metadata.sessionStartTime);
+      return sessionDate >= firstDay && sessionDate <= lastDay;
+    });
+
+    // Group sessions by date
+    monthSessions.forEach(session => {
+      const date = new Date(session.metadata.sessionStartTime);
+      const dateStr = this.formatDateToLocalString(date);
+      
+      if (!calendarData.has(dateStr)) {
+        calendarData.set(dateStr, {
+          sessions: [],
+          totalPL: 0,
+          winCount: 0,
+          lossCount: 0
+        });
+      }
+      
+      const dayData = calendarData.get(dateStr);
+      dayData.sessions.push(session);
+      dayData.totalPL += session.data.totalProfit;
+      
+      if (session.data.totalProfit > 0) {
+        dayData.winCount++;
+      } else if (session.data.totalProfit < 0) {
+        dayData.lossCount++;
+      }
+    });
+
+    return calendarData;
+  }
+
+  private createCalendarDay(date: Date, dayData: any, isCurrentMonth: boolean): HTMLElement {
+    const dayCell = document.createElement('div');
+    dayCell.className = `calendar-day ${isCurrentMonth ? 'current-month' : 'other-month'}`;
+    
+    if (dayData && dayData.sessions.length > 0) {
+      dayCell.classList.add(dayData.totalPL > 0 ? 'profit-day' : 'loss-day');
+      
+      dayCell.innerHTML = `
+        <div class="day-number">${date.getDate()}</div>
+        <div class="day-pl">${this.formatCurrency(dayData.totalPL)}</div>
+        <div class="day-sessions">
+          V: ${dayData.winCount} T: ${dayData.sessions.length} W: ${dayData.winCount} L: ${dayData.lossCount}
+        </div>
+      `;
+      
+      // Add click handler to show sessions for this day
+      dayCell.addEventListener('click', () => this.showDaySessions(date, dayData.sessions));
+    } else {
+      dayCell.innerHTML = `<div class="day-number">${date.getDate()}</div>`;
+    }
+    
+    return dayCell;
+  }
+
+  private updateMonthlySummary(calendarData: Map<string, any>): void {
+    let totalPL = 0;
+    let totalSessions = 0;
+    
+    calendarData.forEach(dayData => {
+      totalPL += dayData.totalPL;
+      totalSessions += dayData.sessions.length;
+    });
+    
+    // Count trading days (days with sessions)
+    const tradingDays = calendarData.size;
+    const avgPerDay = tradingDays > 0 ? totalPL / tradingDays : 0;
+    
+    this.updateStatElement('monthlyProfit', this.formatCurrency(totalPL));
+    this.updateStatElement('monthlySessions', totalSessions.toString());
+    this.updateStatElement('monthlyAvgPerDay', this.formatCurrency(avgPerDay));
+  }
+
+  private showDaySessions(date: Date, sessions: SessionFile[]): void {
+    if (sessions.length === 1) {
+      this.showSessionDetail(sessions[0]);
+    } else {
+      this.showSessionSelection(date, sessions);
+    }
+  }
+
+  private showSessionSelection(date: Date, sessions: SessionFile[]): void {
+    const dateStr = date.toLocaleDateString('en-US', { 
+      weekday: 'long', 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric' 
+    });
+    
+    const titleElement = document.getElementById('sessionSelectionTitle');
+    const messageElement = document.getElementById('sessionSelectionMessage');
+    
+    if (titleElement) {
+      titleElement.textContent = `Sessions for ${dateStr}`;
+    }
+    
+    if (messageElement) {
+      messageElement.textContent = `${sessions.length} sessions found for this day. Select which session to view:`;
+    }
+    
+    this.populateSessionList(sessions);
+    this.showElement('sessionSelectionOverlay');
+  }
+
+  private populateSessionList(sessions: SessionFile[]): void {
+    const sessionList = this.elements.sessionList;
+    if (!sessionList) return;
+    
+    sessionList.innerHTML = '';
+    
+    sessions.forEach(session => {
+      const sessionItem = document.createElement('div');
+      sessionItem.className = 'session-item';
+      
+      const startTime = new Date(session.metadata.sessionStartTime);
+      const timeStr = startTime.toLocaleTimeString('en-US', { 
+        hour: '2-digit', 
+        minute: '2-digit' 
+      });
+      
+      const duration = session.metadata.sessionDuration;
+      const durationStr = this.formatDuration(duration);
+      
+      const plClass = session.data.totalProfit >= 0 ? 'profit' : 'loss';
+      
+      sessionItem.innerHTML = `
+        <div class="session-item-info">
+          <div class="session-item-name">${session.metadata.sessionName}</div>
+          <div class="session-item-details">
+            ${timeStr} • ${session.metadata.casinoName} • ${session.metadata.gameType} • ${durationStr}
+          </div>
+        </div>
+        <div class="session-item-pl ${plClass}">
+          ${this.formatCurrency(session.data.totalProfit)}
+        </div>
+      `;
+      
+      sessionItem.addEventListener('click', () => {
+        this.closeSessionSelection();
+        this.showSessionDetail(session);
+      });
+      
+      sessionList.appendChild(sessionItem);
+    });
+  }
+
+  private closeSessionSelection(): void {
+    this.hideElement('sessionSelectionOverlay');
+  }
+
+  private showSessionDetail(session: SessionFile): void {
+    // Update session detail modal with session data
+    this.updateStatElement('detailSessionName', session.metadata.sessionName);
+    this.updateStatElement('detailCasino', session.metadata.casinoName);
+    this.updateStatElement('detailGameType', session.metadata.gameType);
+    this.updateStatElement('detailDuration', this.formatDuration(session.metadata.sessionDuration));
+    this.updateStatElement('detailProfitLoss', this.formatCurrency(session.data.totalProfit));
+    this.updateStatElement('detailTotalBets', session.metadata.totalBets.toString());
+    
+    // Calculate session-specific stats
+    const winRate = session.metadata.totalBets > 0 ? 
+      (session.metadata.totalWins / session.metadata.totalBets) * 100 : 0;
+    
+    this.updateStatElement('detailWinRate', `${winRate.toFixed(1)}%`);
+    this.updateStatElement('detailTotalWagered', this.formatCurrency(session.metadata.totalAmountWagered));
+    this.updateStatElement('detailConsecutiveWins', session.data.maxConsecutiveWins.toString());
+    this.updateStatElement('detailConsecutiveLosses', session.data.maxConsecutiveLosses.toString());
+    
+    // Create session P/L chart
+    this.createSessionDetailChart(session);
+    
+    // Show the modal
+    this.showElement('sessionDetailOverlay');
+  }
+
+  private createSessionDetailChart(session: SessionFile): void {
+    const canvas = this.elements.sessionDetailChart as HTMLCanvasElement;
+    if (!canvas) return;
+
+    // Destroy existing chart
+    if (this.sessionDetailChart) {
+      this.sessionDetailChart.destroy();
+    }
+
+    // Prepare chart data from session history
+    const chartData = this.prepareSessionChartData(session);
+    
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    this.sessionDetailChart = new (window as any).Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: chartData.labels,
+        datasets: [{
+          label: 'Balance',
+          data: chartData.values,
+          borderColor: '#2196F3',
+          backgroundColor: 'rgba(33, 150, 243, 0.1)',
+          fill: true,
+          tension: 0.2,
+          pointRadius: 2,
+          pointHoverRadius: 4
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          x: {
+            title: {
+              display: true,
+              text: 'Bet Number'
+            }
+          },
+          y: {
+            title: {
+              display: true,
+              text: 'Balance ($)'
+            }
+          }
+        },
+        plugins: {
+          title: {
+            display: true,
+            text: 'Session P/L Progress'
+          },
+          legend: {
+            display: false
+          }
+        }
+      }
+    });
+  }
+
+  private prepareSessionChartData(session: SessionFile): { labels: string[], values: number[] } {
+    const labels = ['Start'];
+    const values = [session.metadata.startingBankroll];
+    
+    session.history.forEach((entry, index) => {
+      labels.push((index + 1).toString());
+      values.push(entry.balance);
+    });
+    
+    return { labels, values };
+  }
+
+  private closeSessionDetail(): void {
+    this.hideElement('sessionDetailOverlay');
+    
+    // Destroy session detail chart
+    if (this.sessionDetailChart) {
+      this.sessionDetailChart.destroy();
+      this.sessionDetailChart = null;
+    }
+  }
+
+  // Update session load dropdown to mark completed sessions (delegates to main loader)
+  private async updateSessionDropdownWithCompletedIndicator(): Promise<void> {
+    // Use the main session loader which now prioritizes cloud data
+    await this.loadSavedSessions();
   }
 }
 
