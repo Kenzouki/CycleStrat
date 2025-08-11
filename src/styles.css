@@ -1267,7 +1267,28 @@ body {
   }
   
   .header-stats {
-    display: none;
+    gap: 0.75rem;
+  }
+  
+  /* Make header more compact on mobile */
+  .app-header {
+    padding: 1rem;
+  }
+  
+  .logo h1 {
+    font-size: var(--font-size-lg);
+  }
+  
+  /* Make header buttons more mobile-friendly */
+  .header-stats .btn {
+    min-width: 44px;
+    min-height: 44px;
+    padding: 0.75rem;
+  }
+  
+  /* Hide session controls on mobile - they're redundant with ones at the bottom */
+  .session-controls-header {
+    display: none !important;
   }
   
   .button-group {
@@ -1280,10 +1301,6 @@ body {
     gap: 1rem;
   }
 
-  /* Hide session controls from header on mobile */
-  .session-controls-header {
-    display: none !important;
-  }
   
   /* Prevent horizontal overflow on mobile */
   .main-content, .panel, .panel-content {

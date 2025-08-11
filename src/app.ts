@@ -439,6 +439,12 @@ class LabouchereApp {
         return;
       }
 
+      // Prevent loading completed sessions as this would incorrectly start timer and affect stats
+      if (this.isSessionCompleted(sessionData)) {
+        this.showToast('Cannot load completed session. This would affect statistics and timer accuracy.', 'error');
+        return;
+      }
+
       this.currentSession = sessionData;
       if (this.currentSession) {
         // Convert date strings back to Date objects
@@ -978,31 +984,33 @@ class LabouchereApp {
   }
 
   private showEndSessionDialog(): void {
-    const modal = document.createElement('div');
-    modal.className = 'modal';
-    modal.innerHTML = `
-      <div class="modal-content">
-        <h3>Session Paused</h3>
-        <p>Your session is now paused. What would you like to do?</p>
-        <div class="modal-buttons">
-          <button id="continueSession" class="btn btn-primary">Continue Later</button>
-          <button id="endSession" class="btn btn-secondary">End Session</button>
-        </div>
-      </div>
-    `;
+    if (!this.elements.modalOverlay || !this.elements.modalTitle || !this.elements.modalMessage) return;
 
-    document.body.appendChild(modal);
+    this.elements.modalTitle.textContent = 'Session Paused';
+    this.elements.modalMessage.innerHTML = 'Your session is now paused. What would you like to do?';
+    
+    // Update modal buttons
+    const modalActions = this.elements.modalOverlay.querySelector('.modal-actions');
+    if (modalActions) {
+      modalActions.innerHTML = `
+        <button class="btn btn-secondary" id="continueLaterBtn">Continue Later</button>
+        <button class="btn btn-primary" id="endSessionBtn">End Session</button>
+      `;
+    }
 
-    const continueBtn = modal.querySelector('#continueSession');
-    const endBtn = modal.querySelector('#endSession');
+    this.elements.modalOverlay.style.display = 'flex';
 
-    continueBtn?.addEventListener('click', () => {
-      document.body.removeChild(modal);
+    // Set up event handlers
+    const continueLaterBtn = modalActions?.querySelector('#continueLaterBtn');
+    const endSessionBtn = modalActions?.querySelector('#endSessionBtn');
+
+    continueLaterBtn?.addEventListener('click', () => {
+      this.elements.modalOverlay!.style.display = 'none';
       // Session remains paused, no further action needed
     });
 
-    endBtn?.addEventListener('click', () => {
-      document.body.removeChild(modal);
+    endSessionBtn?.addEventListener('click', () => {
+      this.elements.modalOverlay!.style.display = 'none';
       this.showBalanceReconciliationDialog();
     });
   }
@@ -2436,7 +2444,8 @@ class LabouchereApp {
     const dangerColor = isDarkTheme ? '#ef4444' : '#dc2626';
     const pointBorderColor = isDarkTheme ? '#1a2c38' : '#ffffff';
     const gridColor = isDarkTheme ? 'rgba(51, 65, 85, 0.3)' : 'rgba(148, 163, 184, 0.3)';
-    const textColor = isDarkTheme ? '#cbd5e1' : 'rgba(100, 116, 139, 0.8)';
+    const textColor = isDarkTheme ? '#e2e8f0' : 'rgba(100, 116, 139, 0.8)';
+    const titleColor = isDarkTheme ? '#f1f5f9' : 'rgba(55, 65, 81, 0.9)';
 
     const datasets = [{
       label: 'Balance',
@@ -2495,6 +2504,7 @@ class LabouchereApp {
             title: {
               display: true,
               text: 'Bet Number',
+              color: titleColor,
               font: {
                 size: 12,
                 weight: 'bold'
@@ -2512,6 +2522,7 @@ class LabouchereApp {
             title: {
               display: true,
               text: 'Balance ($)',
+              color: titleColor,
               font: {
                 size: 12,
                 weight: 'bold'
@@ -3456,6 +3467,14 @@ class LabouchereApp {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
+    // Theme detection and colors
+    const isDarkTheme = document.documentElement.getAttribute('data-theme') === 'dark' || 
+                       (!document.documentElement.getAttribute('data-theme') && window.matchMedia('(prefers-color-scheme: dark)').matches);
+    const gridColor = isDarkTheme ? 'rgba(51, 65, 85, 0.3)' : 'rgba(148, 163, 184, 0.3)';
+    const textColor = isDarkTheme ? '#e2e8f0' : 'rgba(100, 116, 139, 0.8)';
+    const titleColor = isDarkTheme ? '#f1f5f9' : 'rgba(55, 65, 81, 0.9)';
+    const zerLineColor = isDarkTheme ? 'rgba(226, 232, 240, 0.4)' : 'rgba(100, 116, 139, 0.4)';
+
     this.equityCurveChart = new (window as any).Chart(ctx, {
       type: 'line',
       data: {
@@ -3478,27 +3497,44 @@ class LabouchereApp {
           x: {
             title: {
               display: true,
-              text: 'Date'
+              text: 'Date',
+              color: titleColor
+            },
+            ticks: {
+              color: textColor
+            },
+            grid: {
+              color: gridColor,
+              drawBorder: false
             }
           },
           y: {
             title: {
               display: true,
-              text: 'Profit/Loss ($)'
+              text: 'Profit/Loss ($)',
+              color: titleColor
+            },
+            ticks: {
+              color: textColor
             },
             grid: {
-              color: (ctx: any) => ctx.tick.value === 0 ? 'rgba(255, 255, 255, 0.3)' : 'rgba(255, 255, 255, 0.1)'
+              color: (ctx: any) => ctx.tick.value === 0 ? zerLineColor : gridColor,
+              drawBorder: false
             }
           }
         },
         plugins: {
           title: {
             display: true,
-            text: 'Equity Curve vs Date'
+            text: 'Equity Curve vs Date',
+            color: titleColor
           },
           legend: {
             display: true,
-            position: 'top'
+            position: 'top',
+            labels: {
+              color: textColor
+            }
           }
         }
       }
@@ -3892,6 +3928,13 @@ class LabouchereApp {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
+    // Theme detection and colors
+    const isDarkTheme = document.documentElement.getAttribute('data-theme') === 'dark' || 
+                       (!document.documentElement.getAttribute('data-theme') && window.matchMedia('(prefers-color-scheme: dark)').matches);
+    const gridColor = isDarkTheme ? 'rgba(51, 65, 85, 0.3)' : 'rgba(148, 163, 184, 0.3)';
+    const textColor = isDarkTheme ? '#e2e8f0' : 'rgba(100, 116, 139, 0.8)';
+    const titleColor = isDarkTheme ? '#f1f5f9' : 'rgba(55, 65, 81, 0.9)';
+
     this.sessionDetailChart = new (window as any).Chart(ctx, {
       type: 'line',
       data: {
@@ -3914,20 +3957,37 @@ class LabouchereApp {
           x: {
             title: {
               display: true,
-              text: 'Bet Number'
+              text: 'Bet Number',
+              color: titleColor
+            },
+            ticks: {
+              color: textColor
+            },
+            grid: {
+              color: gridColor,
+              drawBorder: false
             }
           },
           y: {
             title: {
               display: true,
-              text: 'Balance ($)'
+              text: 'Balance ($)',
+              color: titleColor
+            },
+            ticks: {
+              color: textColor
+            },
+            grid: {
+              color: gridColor,
+              drawBorder: false
             }
           }
         },
         plugins: {
           title: {
             display: true,
-            text: 'Session P/L Progress'
+            text: 'Session P/L Progress',
+            color: titleColor
           },
           legend: {
             display: false
