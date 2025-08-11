@@ -117,6 +117,54 @@
   box-sizing: border-box;
 }
 
+/* Mobile-first optimizations */
+html {
+  -webkit-text-size-adjust: 100%; /* Prevents font scaling in iOS */
+  -ms-text-size-adjust: 100%; /* Prevents font scaling in IE */
+  text-size-adjust: 100%;
+}
+
+/* Improved touch targets for mobile */
+@media (max-width: 768px) {
+  /* Ensure minimum touch target sizes */
+  button, .btn, input, select, .clickable {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  /* Improve text selection on mobile */
+  .bet-size-display, .desired-profit {
+    user-select: all;
+    -webkit-user-select: all;
+  }
+  
+  /* Better spacing for mobile forms */
+  .form-group {
+    margin-bottom: 1rem;
+  }
+  
+  .form-control {
+    font-size: 16px; /* Prevents zoom on iOS */
+    padding: 0.75rem;
+  }
+  
+  /* Mobile modal improvements */
+  .modal-overlay {
+    padding: 0.5rem;
+  }
+  
+  .modal-content {
+    border-radius: var(--radius-lg);
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+  
+  /* Improve scrolling performance */
+  .panel-content {
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
 body {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   font-size: var(--font-size-base);
@@ -1108,12 +1156,92 @@ body {
 /* Responsive design */
 @media (max-width: 768px) {
   .main-content {
-    padding: 1rem;
-    gap: 1rem;
+    padding: 0.75rem;
+    gap: 0.75rem;
   }
   
   .panel-content {
-    padding: 1.5rem;
+    padding: 1rem;
+  }
+  
+  /* Mobile button improvements */
+  .btn {
+    min-height: 44px;
+    padding: 0.875rem 1.25rem;
+    font-size: 1rem;
+    font-weight: 500;
+  }
+  
+  .btn-lg {
+    min-height: 48px;
+    padding: 1rem 1.5rem;
+    font-size: 1.1rem;
+  }
+  
+  /* Betting buttons - make them more prominent on mobile */
+  .betting-actions .btn {
+    min-height: 50px;
+    padding: 1rem 1.5rem;
+    font-size: 1.1rem;
+    font-weight: 600;
+    border-radius: var(--radius-lg);
+  }
+  
+  /* Split button improvements */
+  .btn-split {
+    min-height: 44px;
+    font-size: 0.9rem;
+    padding: 0.75rem 1rem;
+  }
+  
+  /* Improve text readability on mobile */
+  .bet-size-display {
+    font-size: 2rem;
+    font-weight: bold;
+  }
+  
+  .desired-profit {
+    font-size: 1.5rem;
+    font-weight: bold;
+  }
+  
+  /* Mobile-specific panel layout fixes */
+  .panel {
+    display: flex !important;
+    flex-direction: column !important;
+  }
+  
+  .panel-header {
+    order: 1 !important;
+    flex-direction: row !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    padding: 1rem 1.5rem !important;
+    width: 100% !important;
+  }
+  
+  .panel-content {
+    order: 2 !important;
+    width: 100% !important;
+    padding: 1.5rem !important;
+  }
+  
+  .panel-header h2 {
+    font-size: var(--font-size-lg) !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 0.75rem !important;
+    margin: 0 !important;
+  }
+  
+  .panel-header i {
+    display: inline !important;
+  }
+  
+  .panel-actions {
+    display: flex !important;
+    gap: 0.5rem !important;
+    flex-direction: row !important;
   }
   
   .form-grid {
@@ -1145,11 +1273,6 @@ body {
   .button-group {
     flex-direction: column;
   }
-  
-  .panel-actions {
-    flex-direction: column;
-    gap: 0.25rem;
-  }
 
   /* Stack panels vertically on mobile */
   .main-panels-grid {
@@ -1161,22 +1284,148 @@ body {
   .session-controls-header {
     display: none !important;
   }
+  
+  /* Prevent horizontal overflow on mobile */
+  .main-content, .panel, .panel-content {
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+  
+  /* Ensure text doesn't overflow */
+  .panel-content * {
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+  }
+  
+  /* Make status cards more mobile-friendly */
+  .live-stats-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 0.5rem !important;
+  }
+  
+  .live-stat-card {
+    padding: 0.5rem !important;
+    min-height: auto !important;
+  }
+  
+  .live-stat-value {
+    font-size: var(--font-size-lg) !important;
+  }
+  
+  .live-stat-label {
+    font-size: var(--font-size-xs) !important;
+  }
+  
+  /* Analytics panel mobile fixes */
+  .analytics-content {
+    overflow-x: auto;
+    padding: 0.5rem;
+  }
+  
+  .chart-container {
+    min-height: 200px !important;
+    max-width: 100% !important;
+  }
 }
 
 @media (max-width: 480px) {
   .app-header {
-    padding: 1rem;
+    padding: 0.75rem;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    min-height: auto;
   }
   
   .logo h1 {
-    font-size: var(--font-size-xl);
+    font-size: 1.125rem;
+    margin: 0;
+  }
+  
+  /* Session duration and controls */
+  .session-duration {
+    font-size: 0.875rem;
+    font-weight: 500;
+  }
+  
+  .session-controls {
+    gap: 0.375rem;
+    flex-wrap: wrap;
+  }
+  
+  .session-controls .btn {
+    padding: 0.5rem 0.875rem;
+    min-height: 40px;
+    font-size: 0.875rem;
+  }
+  
+  /* Main content adjustments */
+  .main-content {
+    padding: 0.5rem;
+    gap: 0.5rem;
+  }
+  
+  .panel-content {
+    padding: 0.75rem;
+  }
+  
+  /* Ultra-mobile button sizes */
+  .betting-actions .btn {
+    min-height: 52px;
+    font-size: 1.125rem;
+    padding: 1.125rem 1.75rem;
+    border-radius: 12px;
+  }
+  
+  /* Sequence display improvements */
+  .sequence-value {
+    font-size: 0.9rem;
+    padding: 0.5rem 0.75rem;
+    min-height: 36px;
+  }
+  
+  /* Ensure mobile panel layout on small screens */
+  .panel {
+    display: flex !important;
+    flex-direction: column !important;
   }
   
   .panel-header {
-    padding: 1rem 1.5rem;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 1rem;
+    order: 1 !important;
+    flex-direction: row !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    padding: 0.75rem 1rem !important;
+    width: 100% !important;
+  }
+  
+  .panel-content {
+    order: 2 !important;
+    width: 100% !important;
+    padding: 1rem !important;
+  }
+  
+  .panel-header h2 {
+    font-size: var(--font-size-base) !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 0.5rem !important;
+    margin: 0 !important;
+  }
+  
+  .panel-header i {
+    display: inline !important;
+    font-size: var(--font-size-sm) !important;
+  }
+  
+  .panel-actions {
+    display: flex !important;
+    gap: 0.25rem !important;
+    flex-direction: row !important;
+  }
+  
+  .panel-actions .btn {
+    padding: 0.25rem 0.5rem !important;
+    font-size: var(--font-size-xs) !important;
   }
   
   .bet-value {
@@ -1185,6 +1434,51 @@ body {
   
   .profit-value {
     font-size: var(--font-size-xl);
+  }
+  
+  /* Extra small screens - force single column grid for everything */
+  .main-content {
+    padding: 0.5rem !important;
+    gap: 0.75rem !important;
+  }
+  
+  /* Even more compact stats grid - keep essential stats only */
+  .live-stats-grid {
+    grid-template-columns: 1fr 1fr !important;
+    gap: 0.25rem !important;
+  }
+  
+  /* Only show critical stats on smallest screens */
+  .live-stat-card.priority-medium,
+  .live-stat-card.priority-low {
+    display: none !important;
+  }
+  
+  .live-stat-card {
+    padding: 0.375rem !important;
+  }
+  
+  .live-stat-value {
+    font-size: var(--font-size-base) !important;
+  }
+  
+  .live-stat-label {
+    font-size: 0.7rem !important;
+  }
+  
+  /* Make chart containers more compact */
+  .chart-container {
+    min-height: 150px !important;
+  }
+  
+  /* Compact form elements */
+  .form-grid {
+    gap: 0.5rem !important;
+  }
+  
+  .form-control {
+    padding: 0.5rem !important;
+    font-size: var(--font-size-sm) !important;
   }
 }
 
@@ -1224,6 +1518,37 @@ input:focus-visible,
 select:focus-visible {
   outline: 2px solid var(--primary-color);
   outline-offset: 2px;
+}
+
+/* Base form control styling */
+.form-control,
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="number"],
+input[type="date"],
+select {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-size: var(--font-size-base);
+  font-family: inherit;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.form-control:focus,
+input[type="text"]:focus,
+input[type="email"]:focus,
+input[type="password"]:focus,
+input[type="number"]:focus,
+input[type="date"]:focus,
+select:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px rgb(37 99 235 / 0.1);
 }
 
 /* High contrast mode support */
@@ -1429,9 +1754,11 @@ select:focus-visible {
   /* Panel headers at TOP */
   .panel-header {
     order: 1 !important;
-    justify-content: center !important;
-    text-align: center !important;
-    padding: 0.5rem !important;
+    flex-direction: row !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    text-align: left !important;
+    padding: 0.75rem 1rem !important;
     width: 100% !important;
   }
   
@@ -1442,12 +1769,12 @@ select:focus-visible {
   }
   
   .panel-header h2 {
-    text-align: center !important;
-    font-size: 0.9rem !important;
+    text-align: left !important;
+    font-size: var(--font-size-lg) !important;
     display: flex !important;
-    justify-content: center !important;
     align-items: center !important;
     gap: 0.5rem !important;
+    margin: 0 !important;
   }
   
   /* Show icons back in panel headers */
@@ -1462,9 +1789,9 @@ select:focus-visible {
   /* Show panel actions on desktop */
   .panel-header .panel-actions {
     display: flex !important;
-    justify-content: center !important;
     gap: 0.5rem !important;
   }
+  
   .main-content {
     max-width: 1400px;
     margin: 0 auto;
@@ -1524,15 +1851,18 @@ select:focus-visible {
   }
   
   .panel-header {
-    padding: 0.5rem;
-    text-align: center;
-    justify-content: center;
+    padding: 0.75rem 1rem;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
   }
   
   .panel-header h2 {
-    font-size: 0.9rem;
+    font-size: var(--font-size-base);
     margin: 0;
-    text-align: center;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
   }
   
   /* Show icons in panel headers for desktop */
@@ -1542,7 +1872,6 @@ select:focus-visible {
   
   .panel-actions {
     display: flex;
-    justify-content: center;
     gap: 0.5rem;
   }
   
@@ -1628,12 +1957,16 @@ select:focus-visible {
     font-size: 0.875rem;
   }
   
-  .history-table {
+  .history-table,
+  .betting-history-table {
     font-size: 0.8rem;
+    min-width: 800px; /* Wider minimum for desktop */
   }
   
   .history-table th,
-  .history-table td {
+  .history-table td,
+  .betting-history-table th,
+  .betting-history-table td {
     padding: 0.5rem;
   }
   
@@ -1661,14 +1994,84 @@ select:focus-visible {
 
 @media (min-width: 768px) and (max-width: 1199px) {
   .main-content {
-    max-width: 900px;
+    max-width: 1000px;
     margin: 0 auto;
-    padding: 2rem;
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
   }
   
+  /* Ensure proper panel structure for tablets */
+  .panel {
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .panel-header {
+    order: 1;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 1rem;
+  }
+  
+  .panel-content {
+    order: 2;
+    width: 100%;
+  }
+  
+  .panel-header h2 {
+    font-size: var(--font-size-lg);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0;
+  }
+  
+  .panel-header i {
+    display: inline;
+  }
+  
+  .panel-header .panel-actions {
+    display: flex;
+    gap: 0.5rem;
+  }
+  
+  /* Live stats grid for tablets - 4 columns instead of 6 */
+  .live-stats-grid {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.75rem;
+  }
+  
+  /* Status grid for other panels */
   .status-grid {
     grid-template-columns: repeat(3, 1fr);
     gap: 1rem;
+  }
+  
+  /* Better spacing for betting history table */
+  .betting-history-table,
+  .history-table {
+    font-size: var(--font-size-sm);
+  }
+  
+  .betting-history-table th,
+  .betting-history-table td,
+  .history-table th,
+  .history-table td {
+    padding: 0.5rem 0.25rem;
+  }
+  
+  /* Horizontal scroll for tables on medium screens */
+  .history-table-container {
+    overflow-x: auto;
+    max-width: 100%;
+  }
+  
+  .history-table,
+  .betting-history-table {
+    min-width: 700px; /* Ensure readable column widths */
   }
 }
 
@@ -1679,7 +2082,23 @@ select:focus-visible {
   }
   
   .status-card {
-    padding: 0.75rem;
+    padding: 0.875rem;
+    min-height: 85px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+  
+  .status-value {
+    font-size: 1.375rem;
+    font-weight: bold;
+    margin: 0.25rem 0;
+  }
+  
+  .status-label {
+    font-size: 0.8rem;
+    line-height: 1.2;
+    text-align: center;
   }
   
   .status-icon {
@@ -2736,7 +3155,23 @@ select:focus-visible {
 }
 
 /* Responsive adjustments */
-@media (max-width: 1024px) {
+/* Medium desktop screens - smooth transition */
+@media (min-width: 1024px) and (max-width: 1199px) {
+  .live-stats-grid {
+    grid-template-columns: repeat(5, 1fr);
+    gap: 0.6rem;
+  }
+  
+  .live-stat-card {
+    padding: 0.5rem 0.375rem;
+  }
+  
+  .status-value {
+    font-size: var(--font-size-sm);
+  }
+}
+
+@media (max-width: 1023px) {
   .live-stats-grid {
     grid-template-columns: repeat(4, 1fr);
     gap: 0.5rem;
@@ -2756,11 +3191,67 @@ select:focus-visible {
   .live-stat-value {
     font-size: var(--font-size-base);
   }
+  
+  /* Hide lower priority stats on smaller tablets */
+  .live-stat-card.priority-low {
+    display: none;
+  }
 }
 
 @media (max-width: 480px) {
   .live-stats-grid {
     grid-template-columns: repeat(2, 1fr);
+    gap: 0.375rem;
+  }
+  
+  .live-stat-card {
+    padding: 0.625rem;
+    min-height: 70px;
+  }
+  
+  .live-stat-value {
+    font-size: 1.1rem;
+    font-weight: bold;
+  }
+  
+  .live-stat-label {
+    font-size: 0.75rem;
+    line-height: 1.2;
+  }
+  
+  /* Show only highest priority stats on mobile */
+  .live-stat-card.priority-medium,
+  .live-stat-card.priority-low {
+    display: none;
+  }
+  
+  /* Ensure consistent 2x2 grid layout */
+  .live-stats-grid {
+    grid-template-rows: repeat(2, 1fr);
+    min-height: 150px;
+  }
+  
+  /* Analytics improvements for very small screens */
+  .performance-summary {
+    grid-template-columns: 1fr;
+    gap: 0.5rem;
+  }
+  
+  .summary-card {
+    padding: 0.75rem;
+    text-align: center;
+  }
+  
+  .chart-container {
+    height: 200px;
+    margin: 0.5rem 0;
+  }
+  
+  /* Modal improvements */
+  .modal-content {
+    margin: 0.5rem;
+    max-height: calc(100vh - 1rem);
+    overflow-y: auto;
   }
 }
 
@@ -3377,6 +3868,71 @@ select:focus-visible {
   .analytics-filters {
     flex-direction: column;
     align-items: stretch;
+    gap: 0.75rem;
+    padding: 0.75rem;
+  }
+  
+  .filter-group {
+    min-width: auto;
+    width: 100%;
+  }
+  
+  .filter-group select {
+    width: 100%;
+    min-height: 44px;
+    font-size: 1rem;
+    padding: 0.75rem;
+  }
+  
+  /* Performance summary cards */
+  .performance-summary {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+  
+  .summary-card {
+    padding: 1rem;
+    min-height: 60px;
+  }
+  
+  /* Mobile table optimizations */
+  .history-table-container {
+    border-radius: var(--radius-sm);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  }
+  
+  .history-table,
+  .betting-history-table {
+    font-size: 0.875rem;
+    min-width: 600px; /* Reduced but still readable */
+  }
+  
+  .history-table th,
+  .history-table td,
+  .betting-history-table th,
+  .betting-history-table td {
+    padding: 0.625rem 0.375rem;
+    vertical-align: middle;
+  }
+  
+  .history-table th {
+    font-size: 0.8rem;
+    white-space: nowrap;
+  }
+  
+  /* Improve outcome badges on mobile */
+  .outcome-badge {
+    font-size: 0.75rem;
+    padding: 0.125rem 0.5rem;
+  }
+  
+  .summary-value {
+    font-size: 1.5rem;
+    font-weight: bold;
+  }
+  
+  .summary-label {
+    font-size: 0.875rem;
   }
   
   .filter-group {
