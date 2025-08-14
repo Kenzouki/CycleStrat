@@ -28,6 +28,7 @@ interface SessionMetadata {
   totalBets: number;
   isSessionPaused: boolean;
   isManuallyEnded: boolean;
+  useMultiEntryLossDistribution: boolean;
 }
 
 interface SessionData {
@@ -126,7 +127,7 @@ class LabouchereApp {
       'newSession', 'loadSession', 'deleteSession',
       'startingBankroll', 'profitGoal', 'stopLoss', 'profitPercentage',
       'stopLossPercentage', 'useProfitPercentage', 'useStopLossPercentage',
-      'minimumBet', 'numberOfCycles', 'evenMoney', 'riskRewardMultiplier',
+      'minimumBet', 'numberOfCycles', 'evenMoney', 'riskRewardMultiplier', 'useMultiEntryLossDistribution',
       'startSession', 'pauseSession', 'saveSession', 'exportStats',
       'sessionControlsHeader', 'sessionDurationHeader', 'pauseSessionHeader', 'saveSessionHeader', 'exportStatsHeader',
       'mainPanelsGrid',
@@ -178,7 +179,10 @@ class LabouchereApp {
     this.elements.useProfitPercentage?.addEventListener('change', () => this.toggleProfitPercentage());
     this.elements.useStopLossPercentage?.addEventListener('change', () => this.toggleStopLossPercentage());
     this.elements.evenMoney?.addEventListener('change', () => this.toggleEvenMoney());
-    this.elements.riskRewardMultiplier?.addEventListener('input', () => this.updateBetTypeInfo());
+    this.elements.riskRewardMultiplier?.addEventListener('input', () => {
+      this.updateBetTypeInfo();
+      this.updateMultiEntryVisibility();
+    });
     this.elements.casinoName?.addEventListener('blur', () => this.generateSessionName());
     this.elements.gameType?.addEventListener('change', () => this.generateSessionName());
 
@@ -375,6 +379,7 @@ class LabouchereApp {
         sequenceValue: 0,
         riskRewardMultiplier: 1.0,
         evenMoney: true,
+        useMultiEntryLossDistribution: false,
         useProfitGoalPercentage: false,
         useStopLossPercentage: false,
         profitGoalPercentage: 10,
@@ -734,6 +739,7 @@ class LabouchereApp {
       riskRewardGroup.style.display = evenMoney ? 'none' : 'block';
     }
     this.updateBetTypeInfo();
+    this.updateMultiEntryVisibility();
   }
 
 
@@ -765,6 +771,24 @@ class LabouchereApp {
       }
 
       betTypeInfo.textContent = infoText;
+    }
+  }
+
+  private updateMultiEntryVisibility(): void {
+    const multiEntryGroup = document.getElementById('multiEntryGroup');
+    if (!multiEntryGroup) return;
+
+    const evenMoney = (this.elements.evenMoney as HTMLInputElement).checked;
+    const multiplier = parseFloat((this.elements.riskRewardMultiplier as HTMLInputElement).value);
+    
+    // Show multi-entry option only for non-even money bets with RR < 1
+    const shouldShow = !evenMoney && !isNaN(multiplier) && multiplier < 1;
+    multiEntryGroup.style.display = shouldShow ? 'block' : 'none';
+    
+    // Reset checkbox if option is hidden
+    if (!shouldShow) {
+      const checkbox = this.elements.useMultiEntryLossDistribution as HTMLInputElement;
+      if (checkbox) checkbox.checked = false;
     }
   }
 
@@ -862,6 +886,7 @@ class LabouchereApp {
       metadata.numberOfCycles = numberOfCycles;
       metadata.riskRewardMultiplier = riskRewardMultiplier;
       metadata.evenMoney = evenMoney;
+      metadata.useMultiEntryLossDistribution = (this.elements.useMultiEntryLossDistribution as HTMLInputElement).checked;
       metadata.useProfitGoalPercentage = (this.elements.useProfitPercentage as HTMLInputElement).checked;
       metadata.useStopLossPercentage = (this.elements.useStopLossPercentage as HTMLInputElement).checked;
       metadata.profitGoalPercentage = parseFloat((this.elements.profitPercentage as HTMLInputElement).value);
@@ -1216,9 +1241,28 @@ class LabouchereApp {
 
       // Add to sequence - for non-even money, scale by risk-reward multiplier
       const sequenceAddition = metadata.evenMoney ? desiredProfit : (desiredProfit / metadata.riskRewardMultiplier);
-      const newSequenceValue = this.ensureMinimumBet(sequenceAddition, metadata.minimumBet);
       
-      data.sequence.push(newSequenceValue);
+      // Check if multi-entry loss distribution should be used
+      if (metadata.useMultiEntryLossDistribution && 
+          !metadata.evenMoney && 
+          metadata.riskRewardMultiplier < 1) {
+        
+        // Calculate number of entries: 1 / RR rounded to nearest integer
+        const numberOfEntries = Math.round(1 / metadata.riskRewardMultiplier);
+        
+        // Distribute the loss amount evenly across multiple entries
+        const entryValue = this.ensureMinimumBet(sequenceAddition / numberOfEntries, metadata.minimumBet);
+        
+        // Add multiple entries to the sequence
+        for (let i = 0; i < numberOfEntries; i++) {
+          data.sequence.push(entryValue);
+        }
+      } else {
+        // Original logic: add single entry
+        const newSequenceValue = this.ensureMinimumBet(sequenceAddition, metadata.minimumBet);
+        data.sequence.push(newSequenceValue);
+      }
+      
       data.allCycleSequences[data.currentCycle - 1] = [...data.sequence];
 
       // Auto-sort sequence if enabled
@@ -2062,6 +2106,7 @@ class LabouchereApp {
     (this.elements.numberOfCycles as HTMLInputElement).value = metadata.numberOfCycles.toString();
     (this.elements.evenMoney as HTMLInputElement).checked = metadata.evenMoney;
     (this.elements.riskRewardMultiplier as HTMLInputElement).value = metadata.riskRewardMultiplier.toString();
+    (this.elements.useMultiEntryLossDistribution as HTMLInputElement).checked = metadata.useMultiEntryLossDistribution || false;
     this.toggleEvenMoney(); // Show/hide risk-reward input based on even money setting
     (this.elements.useProfitPercentage as HTMLInputElement).checked = metadata.useProfitGoalPercentage;
     (this.elements.useStopLossPercentage as HTMLInputElement).checked = metadata.useStopLossPercentage;

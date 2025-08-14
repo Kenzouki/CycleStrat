@@ -181,6 +181,15 @@
                             <small class="form-hint" id="betTypeInfo">0.5 = dozens/columns (2:1 odds), 2 = single numbers (35:1 odds)</small>
                         </div>
 
+                        <!-- Multi-Entry Loss Distribution (for non-even money bets with low RR) -->
+                        <div class="form-group" id="multiEntryGroup" style="display: none;">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="useMultiEntryLossDistribution">
+                                Multi-Entry Loss Distribution
+                            </label>
+                            <small class="form-hint">Splits loss recovery into multiple smaller entries (available for non-even bets with RR &lt; 1)</small>
+                        </div>
+
                         <div class="button-group">
                             <button class="btn btn-primary btn-large" id="startSession">
                                 <i class="fas fa-play"></i> Start Session

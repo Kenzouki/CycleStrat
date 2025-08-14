@@ -67,5 +67,6 @@ export const CASINO_OPTIONS = [
   { value: 'shuffle', label: 'Shuffle', icon: '🔀', url: 'https://shuffle.com/', logo: 'https://shuffle.com/assets/images/shuffle-logo.png' },
   { value: 'betpanda', label: 'BetPanda', icon: '🐼', url: 'https://betpanda.io/en/', logo: 'https://betpanda.io/assets/images/betpanda-logo.png' },
   { value: 'duelbits', label: 'DuelBits', icon: '⚔️', url: 'https://duelbits.com/en', logo: 'https://duelbits.com/assets/images/duelbits-logo.png' },
+  { value: 'rainbet', label: 'Rainbet', icon: '🌧️', url: 'https://rainbet.com/', logo: 'https://rainbet.com/assets/images/rainbet-logo.png' },
   { value: 'other', label: 'Other Casino', icon: '🏛️', isCustom: true }
 ];
