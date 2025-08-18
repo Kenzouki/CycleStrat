@@ -41,6 +41,12 @@ interface SessionData {
   maxConsecutiveWins: number;
   maxConsecutiveLosses: number;
   currentStreak: number;
+  cycleStartingSums: number[];
+  autoReshuffleEnabled: boolean;
+  reshuffleMultiplier: number;
+  reshuffleBehavior: 'multiple' | 'single' | 'specific' | 'additional';
+  reshuffleCycleCount: number;
+  reshuffleAdditionalCount: number;
 }
 
 interface HistoryEntry {
@@ -150,6 +156,9 @@ class LabouchereApp {
       'appCurrentBalance', 'actualBalance', 'balanceDifference', 'skipBalanceUpdate', 'confirmBalanceUpdate',
       'reshuffleCycles', 'reshuffleOverlay', 'reshuffleClose', 'remainingSum', 'newCycleCount',
       'cyclePreview', 'valuePerCycle', 'cycleValuePreview', 'reshuffleCancel', 'reshuffleConfirm',
+      'autoReshuffle', 'cycleInfo', 'currentCycleSum', 'remainingCycles', 'cycleStartingSum',
+      'reshuffleThreshold', 'autoReshuffleSettings', 'reshuffleMultiplier', 'reshuffleBehavior',
+      'reshuffleCycleCount', 'reshuffleCycleCountGroup', 'reshuffleAdditionalCount', 'reshuffleAdditionalCountGroup',
       'analyticsBtn', 'analyticsPanel', 'closeAnalytics', 'dashboardViewBtn', 'calendarViewBtn',
       'dashboardView', 'calendarView', 'dateRangeFilter', 'customDateInputs', 'startDate', 'endDate',
       'gameFilter', 'casinoFilter', 'applyFilters', 'resetFilters', 'equityCurveChart',
@@ -209,6 +218,11 @@ class LabouchereApp {
     // Sequence actions
     this.elements.sortCurrentCycle?.addEventListener('click', () => this.sortCurrentCycle());
     this.elements.reshuffleCycles?.addEventListener('click', () => this.showReshuffleModal());
+    this.elements.autoReshuffle?.addEventListener('change', () => this.toggleAutoReshuffle());
+    this.elements.reshuffleMultiplier?.addEventListener('input', () => this.updateAutoReshuffleSettings());
+    this.elements.reshuffleBehavior?.addEventListener('change', () => this.updateAutoReshuffleSettings());
+    this.elements.reshuffleCycleCount?.addEventListener('input', () => this.updateAutoReshuffleSettings());
+    this.elements.reshuffleAdditionalCount?.addEventListener('input', () => this.updateAutoReshuffleSettings());
 
     // UI toggles
     this.elements.collapseSetup?.addEventListener('click', () => this.toggleSetupPanel());
@@ -402,7 +416,13 @@ class LabouchereApp {
         allCycleSequences: [],
         maxConsecutiveWins: 0,
         maxConsecutiveLosses: 0,
-        currentStreak: 0
+        currentStreak: 0,
+        cycleStartingSums: [],
+        autoReshuffleEnabled: false,
+        reshuffleMultiplier: 5,
+        reshuffleBehavior: 'multiple',
+        reshuffleCycleCount: 5,
+        reshuffleAdditionalCount: 2
       },
       history: []
     };
@@ -457,6 +477,9 @@ class LabouchereApp {
         this.currentSession.history.forEach(entry => {
           entry.timestamp = new Date(entry.timestamp);
         });
+
+        // Migrate legacy sessions that don't have auto-reshuffle properties
+        this.migrateAutoReshuffleProperties();
 
         this.populateUIFromSession();
         this.showToast(`Session "${selectedSession}" loaded successfully`, 'success');
@@ -912,8 +935,14 @@ class LabouchereApp {
       data.maxConsecutiveWins = 0;
       data.maxConsecutiveLosses = 0;
       data.currentStreak = 0;
+      data.cycleStartingSums = [];
+      data.autoReshuffleEnabled = false;
+      data.reshuffleMultiplier = 5;
+      data.reshuffleBehavior = 'multiple';
+      data.reshuffleCycleCount = 5;
+      data.reshuffleAdditionalCount = 2;
 
-      // Initialize all cycle sequences
+      // Initialize all cycle sequences and starting sums
       for (let i = 0; i < numberOfCycles; i++) {
         const cycleSequence = [
           metadata.sequenceValue,
@@ -922,6 +951,10 @@ class LabouchereApp {
           metadata.sequenceValue
         ];
         data.allCycleSequences.push(cycleSequence);
+        
+        // Calculate and store starting sum for this cycle
+        const startingSum = cycleSequence.reduce((sum, value) => sum + value, 0);
+        data.cycleStartingSums.push(startingSum);
       }
 
       // Set current sequence to first cycle
@@ -1121,6 +1154,8 @@ class LabouchereApp {
     // Update final statistics
     if (this.currentSession) {
       this.currentSession.metadata.sessionDuration = this.sessionDuration;
+      
+      // No need to modify totalProfit - Final P/L will be calculated from balance difference
     }
 
     // Hide session panels
@@ -1142,6 +1177,13 @@ class LabouchereApp {
 
     this.showToast(`${reason}: ${message}`, 'info');
     this.autoSaveIfEnabled();
+    
+    // Refresh analytics data if analytics panel is open
+    setTimeout(async () => {
+      if (this.elements.analyticsPanel && this.elements.analyticsPanel.style.display !== 'none') {
+        await this.initializeAnalytics();
+      }
+    }, 500); // Allow auto-save to complete first
     
     // Prompt for balance update after session ends
     setTimeout(() => {
@@ -1287,6 +1329,9 @@ class LabouchereApp {
         return;
       }
     }
+
+    // Check auto-reshuffle condition after processing bet
+    this.checkAutoReshuffleCondition();
 
     // Update displays
     this.updateAllDisplays();
@@ -1460,6 +1505,11 @@ class LabouchereApp {
       return startingBankroll * percentage / 100;
     }
     return parseFloat((this.elements.stopLoss as HTMLInputElement).value);
+  }
+
+  private calculateSessionProfitLoss(session: SessionFile): number {
+    // Calculate actual P/L as ending balance minus starting balance
+    return session.data.balance - session.metadata.startingBankroll;
   }
 
   private calculateDesiredProfit(): number {
@@ -1748,13 +1798,21 @@ class LabouchereApp {
           data.totalProfit = this.roundToMinimumBet(data.totalProfit + data.cycleProfit, metadata.minimumBet);
           data.currentCycle++;
           if (data.currentCycle <= metadata.numberOfCycles) {
-            data.sequence = [...data.allCycleSequences[data.currentCycle - 1]];
+            // Ensure the cycle sequence exists and is an array
+            const cycleIndex = data.currentCycle - 1;
+            if (!data.allCycleSequences[cycleIndex] || !Array.isArray(data.allCycleSequences[cycleIndex])) {
+              console.error(`Invalid cycle sequence at index ${cycleIndex}`);
+              this.showToast('Error: Invalid cycle data. Please check your session.', 'error');
+              return;
+            }
+            
+            data.sequence = [...data.allCycleSequences[cycleIndex]];
             data.cycleProfit = 0;
             
             // Auto-sort the new cycle's sequence if enabled
             if (this.shouldAutoSort() && data.sequence.length > 0) {
               data.sequence.sort((a, b) => a - b);
-              data.allCycleSequences[data.currentCycle - 1] = [...data.sequence];
+              data.allCycleSequences[cycleIndex] = [...data.sequence];
             }
           }
         }
@@ -1771,6 +1829,7 @@ class LabouchereApp {
     this.updateSequenceDisplay();
     this.updateRiskManagement();
     this.updateLiveStats();
+    this.updateCycleInfoDisplay();
   }
 
   private updateStatusDisplay(): void {
@@ -1791,6 +1850,43 @@ class LabouchereApp {
 
     // Update win rate with color coding
     this.updateWinRateDisplay(metadata);
+  }
+
+  private migrateAutoReshuffleProperties(): void {
+    if (!this.currentSession) return;
+
+    const data = this.currentSession.data;
+
+    // Add auto-reshuffle properties if they don't exist
+    if (data.cycleStartingSums === undefined) {
+      data.cycleStartingSums = [];
+      
+      // Calculate starting sums for existing cycles
+      for (let i = 0; i < data.allCycleSequences.length; i++) {
+        const startingSum = data.allCycleSequences[i].reduce((sum, value) => sum + value, 0);
+        data.cycleStartingSums.push(startingSum);
+      }
+    }
+
+    if (data.autoReshuffleEnabled === undefined) {
+      data.autoReshuffleEnabled = false;
+    }
+
+    if (data.reshuffleMultiplier === undefined) {
+      data.reshuffleMultiplier = 5;
+    }
+
+    if (data.reshuffleBehavior === undefined) {
+      data.reshuffleBehavior = 'multiple';
+    }
+
+    if (data.reshuffleCycleCount === undefined) {
+      data.reshuffleCycleCount = 5;
+    }
+
+    if (data.reshuffleAdditionalCount === undefined) {
+      data.reshuffleAdditionalCount = 2;
+    }
   }
 
   private migrateLegacyMultiplier(metadata: any): void {
@@ -2054,18 +2150,28 @@ class LabouchereApp {
     if (!this.currentSession) return;
 
     const data = this.currentSession.data;
-    data.sequence = [...data.allCycleSequences[data.currentCycle - 1]];
+    
+    // Ensure the cycle sequence exists and is an array
+    const cycleIndex = data.currentCycle - 1;
+    if (!data.allCycleSequences[cycleIndex] || !Array.isArray(data.allCycleSequences[cycleIndex])) {
+      console.error(`Invalid cycle sequence at index ${cycleIndex}`);
+      this.showToast('Error: Invalid cycle data. Please check your session.', 'error');
+      return;
+    }
+    
+    data.sequence = [...data.allCycleSequences[cycleIndex]];
     data.cycleProfit = 0;
 
     // Auto-sort the new cycle's sequence if enabled
     if (this.shouldAutoSort() && data.sequence.length > 0) {
       data.sequence.sort((a, b) => a - b);
-      data.allCycleSequences[data.currentCycle - 1] = [...data.sequence];
+      data.allCycleSequences[cycleIndex] = [...data.sequence];
     }
 
     this.addToHistory('CYCLE COMPLETE' as any, 0, 0);
     this.updateAllDisplays();
     this.showToast(`Cycle ${data.currentCycle} started`, 'info');
+    this.autoSaveIfEnabled();
   }
 
   // Session Panel Management
@@ -2405,6 +2511,423 @@ class LabouchereApp {
     }
   }
 
+  private toggleAutoReshuffle(): void {
+    if (!this.currentSession) return;
+
+    const autoReshuffleCheckbox = this.elements.autoReshuffle as HTMLInputElement;
+    const autoReshuffleSettings = this.elements.autoReshuffleSettings;
+    
+    if (autoReshuffleCheckbox) {
+      this.currentSession.data.autoReshuffleEnabled = autoReshuffleCheckbox.checked;
+      
+      // Show/hide auto-reshuffle settings
+      if (autoReshuffleSettings) {
+        autoReshuffleSettings.style.display = autoReshuffleCheckbox.checked ? 'block' : 'none';
+      }
+      
+      // Update multiplier and behavior from UI
+      this.updateAutoReshuffleSettings();
+      
+      // Update cycle info display
+      this.updateCycleInfoDisplay();
+      
+      this.autoSaveIfEnabled();
+    }
+  }
+
+  private updateAutoReshuffleSettings(): void {
+    if (!this.currentSession) return;
+
+    const multiplierInput = this.elements.reshuffleMultiplier as HTMLInputElement;
+    const behaviorSelect = this.elements.reshuffleBehavior as HTMLSelectElement;
+    const cycleCountInput = this.elements.reshuffleCycleCount as HTMLInputElement;
+    const cycleCountGroup = this.elements.reshuffleCycleCountGroup as HTMLElement;
+    const additionalCountInput = this.elements.reshuffleAdditionalCount as HTMLInputElement;
+    const additionalCountGroup = this.elements.reshuffleAdditionalCountGroup as HTMLElement;
+    
+    if (multiplierInput) {
+      this.currentSession.data.reshuffleMultiplier = parseFloat(multiplierInput.value) || 5;
+    }
+    
+    if (behaviorSelect) {
+      this.currentSession.data.reshuffleBehavior = behaviorSelect.value as 'multiple' | 'single' | 'specific' | 'additional';
+      
+      // Show/hide input groups based on behavior
+      if (cycleCountGroup) {
+        cycleCountGroup.style.display = behaviorSelect.value === 'specific' ? 'block' : 'none';
+      }
+      if (additionalCountGroup) {
+        additionalCountGroup.style.display = behaviorSelect.value === 'additional' ? 'block' : 'none';
+      }
+    }
+    
+    if (cycleCountInput) {
+      this.currentSession.data.reshuffleCycleCount = parseInt(cycleCountInput.value) || 5;
+    }
+    
+    if (additionalCountInput) {
+      this.currentSession.data.reshuffleAdditionalCount = parseInt(additionalCountInput.value) || 2;
+    }
+
+    // Update cycle info display with new settings
+    this.updateCycleInfoDisplay();
+    
+    // Save the updated settings
+    this.autoSaveIfEnabled();
+  }
+
+  private checkAutoReshuffleCondition(): void {
+    if (!this.currentSession || !this.currentSession.data.autoReshuffleEnabled) return;
+
+    const data = this.currentSession.data;
+    const currentCycleIndex = data.currentCycle - 1;
+    
+    if (currentCycleIndex >= data.cycleStartingSums.length) return;
+
+    const startingSum = data.cycleStartingSums[currentCycleIndex];
+    const threshold = startingSum * data.reshuffleMultiplier;
+    
+    // Check if cycle profit falls below threshold
+    if (data.cycleProfit <= -threshold) {
+      this.performAutoReshuffle();
+    }
+  }
+
+  private performAutoReshuffle(): void {
+    if (!this.currentSession) return;
+
+    const data = this.currentSession.data;
+    
+    // Calculate remaining cycles count
+    const remainingCycles = data.allCycleSequences.length - data.currentCycle + 1;
+    
+    if (remainingCycles <= 0) return;
+
+    // Calculate remaining sum from current and pending cycles
+    let remainingSum = 0;
+    
+    // Add current cycle sum
+    remainingSum += data.sequence.reduce((sum, val) => sum + val, 0);
+    
+    // Add all pending cycles sum
+    for (let i = data.currentCycle; i < data.allCycleSequences.length; i++) {
+      remainingSum += data.allCycleSequences[i].reduce((sum, val) => sum + val, 0);
+    }
+
+    if (data.reshuffleBehavior === 'multiple') {
+      this.performMultipleCyclesReshuffle(remainingSum, remainingCycles);
+    } else if (data.reshuffleBehavior === 'single') {
+      this.performSingleCycleReshuffle(remainingSum);
+    } else if (data.reshuffleBehavior === 'specific') {
+      this.performSpecificCyclesReshuffle(remainingSum, data.reshuffleCycleCount);
+    } else if (data.reshuffleBehavior === 'additional') {
+      this.performAdditionalCyclesReshuffle(remainingSum, data.reshuffleAdditionalCount);
+    }
+
+    // Add reshuffle entry to history
+    this.addReshuffleHistoryEntry();
+    
+    this.showToast('Auto-reshuffle triggered!', 'info');
+    this.updateAllDisplays();
+  }
+
+  private performMultipleCyclesReshuffle(remainingSum: number, remainingCycles: number): void {
+    if (!this.currentSession) return;
+
+    const data = this.currentSession.data;
+    const metadata = this.currentSession.metadata;
+    
+    // Calculate new cycle count to maintain similar structure
+    const originalCycleValue = metadata.sequenceValue * 4; // 4 values per cycle
+    const newCycleCount = Math.max(remainingCycles, Math.ceil(remainingSum / originalCycleValue));
+    const valuePerCycle = Math.round((remainingSum / newCycleCount) * 100) / 100;
+    const roundedValuePerCycle = this.ensureMinimumBet(valuePerCycle / 4, metadata.minimumBet);
+
+    // Keep completed cycles
+    const newCycleSequences = data.allCycleSequences.slice(0, data.currentCycle - 1);
+    const newStartingSums = data.cycleStartingSums.slice(0, data.currentCycle - 1);
+
+    // Add new reshuffled cycles
+    for (let i = 0; i < newCycleCount; i++) {
+      const newCycle = [roundedValuePerCycle, roundedValuePerCycle, roundedValuePerCycle, roundedValuePerCycle];
+      newCycleSequences.push(newCycle);
+      
+      const startingSum = newCycle.reduce((sum, value) => sum + value, 0);
+      newStartingSums.push(startingSum);
+    }
+
+    data.allCycleSequences = newCycleSequences;
+    data.cycleStartingSums = newStartingSums;
+    
+    // Reset cycle profit after reshuffle
+    data.cycleProfit = 0;
+    
+    // Ensure the cycle sequence exists and is an array before using spread operator
+    const cycleIndex = data.currentCycle - 1;
+    if (data.allCycleSequences[cycleIndex] && Array.isArray(data.allCycleSequences[cycleIndex])) {
+      data.sequence = [...data.allCycleSequences[cycleIndex]];
+    } else {
+      console.error(`Invalid cycle sequence at index ${cycleIndex} after reshuffle`);
+      this.showToast('Error: Invalid cycle data after reshuffle.', 'error');
+      return;
+    }
+    
+    // Update number of cycles to reflect the new structure
+    this.currentSession.metadata.numberOfCycles = newCycleSequences.length;
+    
+    // Update UI
+    if (this.elements.numberOfCycles) {
+      (this.elements.numberOfCycles as HTMLInputElement).value = this.currentSession.metadata.numberOfCycles.toString();
+    }
+    
+    this.autoSaveIfEnabled();
+  }
+
+  private performSingleCycleReshuffle(remainingSum: number): void {
+    if (!this.currentSession) return;
+
+    const data = this.currentSession.data;
+    const metadata = this.currentSession.metadata;
+    
+    // Calculate scaled bet amounts for single new cycle
+    const scaledValue = this.ensureMinimumBet(remainingSum / 4, metadata.minimumBet);
+    const newCycle = [scaledValue, scaledValue, scaledValue, scaledValue];
+    
+    // Keep only the completed cycles (cycles before the current one)
+    const completedCycleCount = data.currentCycle - 1;
+    const newCycleSequences = data.allCycleSequences.slice(0, completedCycleCount);
+    const newStartingSums = data.cycleStartingSums.slice(0, completedCycleCount);
+    
+    // Reset all original cycles to their starting state (from current cycle onwards)
+    for (let i = completedCycleCount; i < metadata.numberOfCycles; i++) {
+      const originalValue = metadata.sequenceValue;
+      const originalCycle = [originalValue, originalValue, originalValue, originalValue];
+      newCycleSequences.push(originalCycle);
+      
+      const startingSum = originalCycle.reduce((sum, value) => sum + value, 0);
+      newStartingSums.push(startingSum);
+    }
+    
+    // Add the new reshuffled cycle with the remaining sum
+    newCycleSequences.push(newCycle);
+    
+    const newCycleStartingSum = newCycle.reduce((sum, value) => sum + value, 0);
+    newStartingSums.push(newCycleStartingSum);
+
+    data.allCycleSequences = newCycleSequences;
+    data.cycleStartingSums = newStartingSums;
+    
+    // Set current cycle back to the first incomplete cycle (where we were when reshuffle triggered)
+    data.currentCycle = completedCycleCount + 1;
+    data.sequence = [...newCycleSequences[data.currentCycle - 1]];
+    
+    // Reset cycle profit after reshuffle
+    data.cycleProfit = 0;
+    
+    // Update number of cycles to reflect the new structure (original + 1)
+    metadata.numberOfCycles = newCycleSequences.length;
+    
+    // Update UI
+    if (this.elements.numberOfCycles) {
+      (this.elements.numberOfCycles as HTMLInputElement).value = metadata.numberOfCycles.toString();
+    }
+    
+    this.autoSaveIfEnabled();
+  }
+
+  private performSpecificCyclesReshuffle(remainingSum: number, cycleCount: number): void {
+    if (!this.currentSession) return;
+
+    const data = this.currentSession.data;
+    const metadata = this.currentSession.metadata;
+    
+    // Calculate value per cycle based on remaining sum and specified cycle count
+    const valuePerCycle = Math.round((remainingSum / cycleCount) * 100) / 100;
+    const roundedValuePerCycle = this.ensureMinimumBet(valuePerCycle / 4, metadata.minimumBet);
+
+    // Keep completed cycles
+    const newCycleSequences = data.allCycleSequences.slice(0, data.currentCycle - 1);
+    const newStartingSums = data.cycleStartingSums.slice(0, data.currentCycle - 1);
+
+    // Add new reshuffled cycles
+    for (let i = 0; i < cycleCount; i++) {
+      const newCycle = [roundedValuePerCycle, roundedValuePerCycle, roundedValuePerCycle, roundedValuePerCycle];
+      newCycleSequences.push(newCycle);
+      
+      const startingSum = newCycle.reduce((sum, value) => sum + value, 0);
+      newStartingSums.push(startingSum);
+    }
+
+    // Update session data
+    data.allCycleSequences = newCycleSequences;
+    data.cycleStartingSums = newStartingSums;
+    
+    // Reset cycle profit after reshuffle
+    data.cycleProfit = 0;
+    
+    // Ensure the cycle sequence exists and is an array before using spread operator
+    const cycleIndex = data.currentCycle - 1;
+    if (data.allCycleSequences[cycleIndex] && Array.isArray(data.allCycleSequences[cycleIndex])) {
+      data.sequence = [...data.allCycleSequences[cycleIndex]];
+    } else {
+      console.error(`Invalid cycle sequence at index ${cycleIndex} after reshuffle`);
+      this.showToast('Error: Invalid cycle data after reshuffle.', 'error');
+      return;
+    }
+    
+    // Update metadata to reflect new number of cycles
+    metadata.numberOfCycles = newCycleSequences.length;
+    
+    // Update UI
+    if (this.elements.numberOfCycles) {
+      (this.elements.numberOfCycles as HTMLInputElement).value = metadata.numberOfCycles.toString();
+    }
+    
+    this.autoSaveIfEnabled();
+  }
+
+  private performAdditionalCyclesReshuffle(remainingSum: number, additionalCount: number): void {
+    if (!this.currentSession) return;
+
+    const data = this.currentSession.data;
+    const metadata = this.currentSession.metadata;
+    
+    // Calculate remaining cycles from current position
+    const remainingCycles = data.allCycleSequences.length - data.currentCycle + 1;
+    
+    // Total cycles will be remaining cycles + additional cycles
+    const totalCycles = remainingCycles + additionalCount;
+    
+    // Calculate value per cycle based on remaining sum and total cycle count
+    const valuePerCycle = Math.round((remainingSum / totalCycles) * 100) / 100;
+    const roundedValuePerCycle = this.ensureMinimumBet(valuePerCycle / 4, metadata.minimumBet);
+
+    // Keep completed cycles
+    const newCycleSequences = data.allCycleSequences.slice(0, data.currentCycle - 1);
+    const newStartingSums = data.cycleStartingSums.slice(0, data.currentCycle - 1);
+
+    // Add reshuffled cycles (remaining + additional)
+    for (let i = 0; i < totalCycles; i++) {
+      const newCycle = [roundedValuePerCycle, roundedValuePerCycle, roundedValuePerCycle, roundedValuePerCycle];
+      newCycleSequences.push(newCycle);
+      
+      const startingSum = newCycle.reduce((sum, value) => sum + value, 0);
+      newStartingSums.push(startingSum);
+    }
+
+    // Update session data
+    data.allCycleSequences = newCycleSequences;
+    data.cycleStartingSums = newStartingSums;
+    
+    // Reset cycle profit after reshuffle
+    data.cycleProfit = 0;
+    
+    // Ensure the cycle sequence exists and is an array before using spread operator
+    const cycleIndex = data.currentCycle - 1;
+    if (data.allCycleSequences[cycleIndex] && Array.isArray(data.allCycleSequences[cycleIndex])) {
+      data.sequence = [...data.allCycleSequences[cycleIndex]];
+    } else {
+      console.error(`Invalid cycle sequence at index ${cycleIndex} after reshuffle`);
+      this.showToast('Error: Invalid cycle data after reshuffle.', 'error');
+      return;
+    }
+    
+    // Update metadata to reflect new number of cycles
+    metadata.numberOfCycles = newCycleSequences.length;
+    
+    // Update UI
+    if (this.elements.numberOfCycles) {
+      (this.elements.numberOfCycles as HTMLInputElement).value = metadata.numberOfCycles.toString();
+    }
+    
+    this.autoSaveIfEnabled();
+  }
+
+  private addReshuffleHistoryEntry(): void {
+    if (!this.currentSession) return;
+
+    const reshuffleEntry: HistoryEntry = {
+      betNumber: this.currentSession.history.length + 1,
+      outcome: 'Loss' as 'Win' | 'Loss',
+      desiredProfit: 0,
+      betSize: 0,
+      balance: this.currentSession.data.balance,
+      sequenceAfter: 'Auto-Reshuffle Triggered',
+      timestamp: new Date()
+    };
+
+    this.currentSession.history.push(reshuffleEntry);
+  }
+
+  private updateCycleInfoDisplay(): void {
+    if (!this.currentSession) return;
+
+    const data = this.currentSession.data;
+    const cycleInfo = this.elements.cycleInfo;
+    const autoReshuffleSettings = this.elements.autoReshuffleSettings;
+    
+    if (this.isSessionActive && cycleInfo) {
+      cycleInfo.style.display = 'block';
+      
+      // Update cycle stats
+      const currentCycleSum = data.sequence.reduce((sum, val) => sum + val, 0);
+      const remainingCycles = data.allCycleSequences.length - data.currentCycle + 1;
+      const currentCycleIndex = data.currentCycle - 1;
+      const cycleStartingSum = currentCycleIndex < data.cycleStartingSums.length ? 
+        data.cycleStartingSums[currentCycleIndex] : currentCycleSum;
+      const reshuffleThreshold = cycleStartingSum * data.reshuffleMultiplier;
+      
+      this.setElementText('currentCycleSum', this.formatCurrency(currentCycleSum));
+      this.setElementText('remainingCycles', remainingCycles.toString());
+      this.setElementText('cycleStartingSum', this.formatCurrency(cycleStartingSum));
+      this.setElementText('reshuffleThreshold', this.formatCurrency(-reshuffleThreshold));
+      
+      // Show/hide auto-reshuffle settings
+      if (autoReshuffleSettings) {
+        autoReshuffleSettings.style.display = data.autoReshuffleEnabled ? 'block' : 'none';
+      }
+      
+      // Update UI controls
+      const autoReshuffleCheckbox = this.elements.autoReshuffle as HTMLInputElement;
+      const multiplierInput = this.elements.reshuffleMultiplier as HTMLInputElement;
+      const behaviorSelect = this.elements.reshuffleBehavior as HTMLSelectElement;
+      const cycleCountInput = this.elements.reshuffleCycleCount as HTMLInputElement;
+      const cycleCountGroup = this.elements.reshuffleCycleCountGroup as HTMLElement;
+      const additionalCountInput = this.elements.reshuffleAdditionalCount as HTMLInputElement;
+      const additionalCountGroup = this.elements.reshuffleAdditionalCountGroup as HTMLElement;
+      
+      if (autoReshuffleCheckbox) {
+        autoReshuffleCheckbox.checked = data.autoReshuffleEnabled;
+      }
+      
+      if (multiplierInput) {
+        multiplierInput.value = data.reshuffleMultiplier.toString();
+      }
+      
+      if (behaviorSelect) {
+        behaviorSelect.value = data.reshuffleBehavior;
+        
+        // Show/hide input groups based on behavior
+        if (cycleCountGroup) {
+          cycleCountGroup.style.display = data.reshuffleBehavior === 'specific' ? 'block' : 'none';
+        }
+        if (additionalCountGroup) {
+          additionalCountGroup.style.display = data.reshuffleBehavior === 'additional' ? 'block' : 'none';
+        }
+      }
+      
+      if (cycleCountInput) {
+        cycleCountInput.value = data.reshuffleCycleCount.toString();
+      }
+      
+      if (additionalCountInput) {
+        additionalCountInput.value = data.reshuffleAdditionalCount.toString();
+      }
+    } else if (cycleInfo) {
+      cycleInfo.style.display = 'none';
+    }
+  }
+
   private initializeProfitChart(): void {
     if (!this.currentSession) return;
 
@@ -2674,9 +3197,10 @@ class LabouchereApp {
     // Update profit (current session profit including current cycle)
     const profitElement = this.elements.liveProfit;
     if (profitElement) {
-      const currentProfit = data.totalProfit + data.cycleProfit;
-      profitElement.textContent = `$${currentProfit.toFixed(2)}`;
-      profitElement.classList.toggle('negative', currentProfit < 0);
+      // Session profit should be the difference between current balance and starting balance
+      const sessionProfit = data.balance - metadata.startingBankroll;
+      profitElement.textContent = `$${sessionProfit.toFixed(2)}`;
+      profitElement.classList.toggle('negative', sessionProfit < 0);
     }
 
     // Update wins
@@ -3598,7 +4122,7 @@ class LabouchereApp {
       const date = new Date(session.metadata.sessionStartTime);
       const dateStr = this.formatDateToLocalString(date);
       const currentPL = dailyPL.get(dateStr) || 0;
-      dailyPL.set(dateStr, currentPL + session.data.totalProfit);
+      dailyPL.set(dateStr, currentPL + this.calculateSessionProfitLoss(session));
     });
 
     // Convert to arrays and calculate cumulative P/L
@@ -3673,7 +4197,7 @@ class LabouchereApp {
     let profitableSessions = 0;
 
     this.filteredSessions.forEach(session => {
-      const profit = session.data.totalProfit;
+      const profit = this.calculateSessionProfitLoss(session);
       stats.totalProfit += profit;
       stats.totalWagered += session.metadata.totalAmountWagered;
       totalWins += session.metadata.totalWins;
@@ -3802,11 +4326,12 @@ class LabouchereApp {
       
       const dayData = calendarData.get(dateStr);
       dayData.sessions.push(session);
-      dayData.totalPL += session.data.totalProfit;
+      const sessionPL = this.calculateSessionProfitLoss(session);
+      dayData.totalPL += sessionPL;
       
-      if (session.data.totalProfit > 0) {
+      if (sessionPL > 0) {
         dayData.winCount++;
-      } else if (session.data.totalProfit < 0) {
+      } else if (sessionPL < 0) {
         dayData.lossCount++;
       }
     });
@@ -3906,7 +4431,8 @@ class LabouchereApp {
       const duration = session.metadata.sessionDuration;
       const durationStr = this.formatDuration(duration);
       
-      const plClass = session.data.totalProfit >= 0 ? 'profit' : 'loss';
+      const sessionPL = this.calculateSessionProfitLoss(session);
+      const plClass = sessionPL >= 0 ? 'profit' : 'loss';
       
       sessionItem.innerHTML = `
         <div class="session-item-info">
@@ -3916,7 +4442,7 @@ class LabouchereApp {
           </div>
         </div>
         <div class="session-item-pl ${plClass}">
-          ${this.formatCurrency(session.data.totalProfit)}
+          ${this.formatCurrency(sessionPL)}
         </div>
       `;
       
@@ -3939,7 +4465,9 @@ class LabouchereApp {
     this.updateStatElement('detailCasino', session.metadata.casinoName);
     this.updateStatElement('detailGameType', session.metadata.gameType);
     this.updateStatElement('detailDuration', this.formatDuration(session.metadata.sessionDuration));
-    this.updateStatElement('detailProfitLoss', this.formatCurrency(session.data.totalProfit));
+    // Calculate actual P/L as ending balance minus starting balance
+    const actualProfitLoss = this.calculateSessionProfitLoss(session);
+    this.updateStatElement('detailProfitLoss', this.formatCurrency(actualProfitLoss));
     this.updateStatElement('detailTotalBets', session.metadata.totalBets.toString());
     
     // Calculate session-specific stats

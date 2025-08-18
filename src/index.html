@@ -269,10 +269,59 @@
                                     <span class="checkmark"></span>
                                     Auto Sort
                                 </label>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="autoReshuffle" title="Automatically reshuffle cycles when profit threshold is reached">
+                                    <span class="checkmark"></span>
+                                    Auto Reshuffle
+                                </label>
                             </div>
                         </div>
                     </div>
                     <div class="panel-content">
+                        <!-- Cycle Information Display -->
+                        <div class="cycle-info" id="cycleInfo" style="display: none;">
+                            <div class="cycle-stats">
+                                <div class="stat-item">
+                                    <span class="stat-label">Current Cycle Sum:</span>
+                                    <span class="stat-value" id="currentCycleSum">$0.00</span>
+                                </div>
+                                <div class="stat-item">
+                                    <span class="stat-label">Remaining Cycles:</span>
+                                    <span class="stat-value" id="remainingCycles">0</span>
+                                </div>
+                                <div class="stat-item">
+                                    <span class="stat-label">Cycle Starting Sum:</span>
+                                    <span class="stat-value" id="cycleStartingSum">$0.00</span>
+                                </div>
+                                <div class="stat-item">
+                                    <span class="stat-label">Reshuffle Threshold:</span>
+                                    <span class="stat-value" id="reshuffleThreshold">$0.00</span>
+                                </div>
+                            </div>
+                            <div class="auto-reshuffle-settings" id="autoReshuffleSettings" style="display: none;">
+                                <div class="setting-group">
+                                    <label for="reshuffleMultiplier">Multiplier:</label>
+                                    <input type="number" id="reshuffleMultiplier" min="1" max="20" step="0.5" value="5" title="Multiplier for reshuffle threshold calculation">
+                                </div>
+                                <div class="setting-group">
+                                    <label for="reshuffleBehavior">Reshuffle Behavior:</label>
+                                    <select id="reshuffleBehavior" title="Choose how to reshuffle cycles">
+                                        <option value="multiple">Create Multiple Cycles</option>
+                                        <option value="single">Create One More Cycle</option>
+                                        <option value="specific">Create Specific Number of Cycles</option>
+                                        <option value="additional">Add Additional Cycles</option>
+                                    </select>
+                                </div>
+                                <div class="setting-group" id="reshuffleCycleCountGroup" style="display: none;">
+                                    <label for="reshuffleCycleCount">Number of Cycles:</label>
+                                    <input type="number" id="reshuffleCycleCount" min="1" max="100" step="1" value="5" title="Number of cycles to create when auto-reshuffling">
+                                </div>
+                                <div class="setting-group" id="reshuffleAdditionalCountGroup" style="display: none;">
+                                    <label for="reshuffleAdditionalCount">Additional Cycles:</label>
+                                    <input type="number" id="reshuffleAdditionalCount" min="1" max="50" step="1" value="2" title="Number of additional cycles to add to remaining cycles">
+                                </div>
+                            </div>
+                        </div>
                         <div class="sequence-container" id="sequenceContainer">
                             <!-- Sequences will be dynamically generated here -->
                         </div>
