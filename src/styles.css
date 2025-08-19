@@ -885,6 +885,171 @@ body {
   border-radius: var(--radius-md);
 }
 
+/* Blackjack Actions */
+.blackjack-actions {
+  margin-top: 1.5rem;
+  border-top: 2px solid var(--border-color);
+  padding-top: 1.5rem;
+}
+
+.blackjack-declare h4,
+.blackjack-outcome h4 {
+  margin: 0 0 1rem 0;
+  color: var(--text-primary);
+  font-size: var(--font-size-lg);
+  text-align: center;
+}
+
+.blackjack-action-buttons {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: center;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
+.blackjack-action-buttons .btn {
+  flex: 1;
+  min-width: 120px;
+  max-width: 160px;
+}
+
+.backup-bet-info {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 1rem;
+  margin: 1rem 0;
+}
+
+.backup-bet-info p {
+  margin: 0.5rem 0;
+  font-size: var(--font-size-sm);
+}
+
+.backup-warning {
+  background: var(--danger-color);
+  color: white;
+  padding: 0.75rem;
+  border-radius: var(--radius-md);
+  margin-top: 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.outcome-info {
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-md);
+  padding: 1rem;
+  margin: 1rem 0;
+}
+
+.outcome-info p {
+  margin: 0.5rem 0;
+  font-size: var(--font-size-sm);
+}
+
+.blackjack-result-buttons {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.blackjack-result-buttons .btn {
+  flex: 1;
+  min-width: 100px;
+  max-width: 140px;
+}
+
+/* Split DAS Options */
+.split-das-options {
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 1rem;
+  margin: 1rem 0;
+}
+
+.split-das-options h4 {
+  text-align: center;
+  margin: 0 0 1rem 0;
+  color: var(--primary-color);
+}
+
+.pair-controls {
+  display: flex;
+  gap: 1rem;
+  justify-content: space-around;
+  margin: 1rem 0;
+}
+
+.pair-section {
+  flex: 1;
+  text-align: center;
+  background: var(--bg-light);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  padding: 1rem;
+}
+
+.pair-section h5 {
+  margin: 0 0 0.75rem 0;
+  color: var(--text-color);
+  font-size: var(--font-size-sm);
+}
+
+.pair-buttons {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: center;
+}
+
+.pair-buttons .btn {
+  flex: 1;
+  min-width: 80px;
+  padding: 0.5rem 0.75rem;
+  font-size: var(--font-size-xs);
+}
+
+.split-actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  margin-top: 1rem;
+  border-top: 1px solid var(--border-color);
+  padding-top: 1rem;
+}
+
+.split-actions .btn {
+  min-width: 120px;
+}
+
+/* Push button styling */
+.betting-actions .btn-secondary {
+  background: var(--secondary-color);
+  color: white;
+}
+
+.betting-actions .btn-secondary:hover {
+  background: #475569;
+}
+
+/* Push outcome styling in history */
+.outcome-badge.push {
+  background: var(--secondary-color);
+  color: white;
+}
+
+tr.push {
+  background-color: rgba(100, 116, 139, 0.1);
+}
+
+tr.push:hover {
+  background-color: rgba(100, 116, 139, 0.2);
+}
+
 /* Sequence display */
 .sequence-container {
   display: flex;

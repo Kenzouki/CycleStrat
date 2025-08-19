@@ -190,6 +190,35 @@
                             <small class="form-hint">Splits loss recovery into multiple smaller entries (available for non-even bets with RR &lt; 1)</small>
                         </div>
 
+                        <!-- Blackjack Configuration -->
+                        <div class="config-section" id="blackjackConfig" style="display: none;">
+                            <h3>Blackjack Rules</h3>
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label for="splitsAllowed">Maximum Splits Allowed</label>
+                                    <select id="splitsAllowed">
+                                        <option value="0">No Splits</option>
+                                        <option value="1">1 Split</option>
+                                        <option value="2">2 Splits</option>
+                                        <option value="3" selected>3 Splits (Standard)</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label class="checkbox-label">
+                                        <input type="checkbox" id="doubleAfterSplit" checked>
+                                        Double After Split (DAS)
+                                    </label>
+                                </div>
+                                <div class="form-group">
+                                    <label class="checkbox-label">
+                                        <input type="checkbox" id="splitLossesOption">
+                                        Split Losses Option
+                                    </label>
+                                    <small class="form-hint">When enabled, losses from doubles/splits are added as separate entries instead of combined totals</small>
+                                </div>
+                            </div>
+                        </div>
+
                         <div class="button-group">
                             <button class="btn btn-primary btn-large" id="startSession">
                                 <i class="fas fa-play"></i> Start Session
@@ -223,7 +252,8 @@
                                 <span class="profit-value" id="desiredProfit">$0</span>
                             </div>
                         </div>
-                        <div class="betting-actions">
+                        <!-- Regular Betting Actions (always visible) -->
+                        <div class="betting-actions" id="regularBettingActions">
                             <button class="btn btn-success btn-large" id="betWin">
                                 <i class="fas fa-check-circle"></i>
                                 Win
@@ -232,10 +262,109 @@
                                 <i class="fas fa-times-circle"></i>
                                 Loss
                             </button>
+                            <button class="btn btn-secondary btn-large" id="betPush" style="display: none;">
+                                <i class="fas fa-handshake"></i>
+                                Push
+                            </button>
                             <button class="btn btn-warning" id="splitEntry">
                                 <i class="fas fa-cut"></i>
                                 Split Last Entry
                             </button>
+                        </div>
+
+                        <!-- Blackjack Special Actions -->
+                        <div class="blackjack-actions" id="blackjackActions" style="display: none;">
+                            <div class="blackjack-declare">
+                                <h4>Special Actions (Optional)</h4>
+                                <div class="blackjack-action-buttons">
+                                    <button class="btn btn-info" id="declareDouble">
+                                        <i class="fas fa-hand-paper"></i>
+                                        Double Down
+                                    </button>
+                                    <button class="btn btn-info" id="declareSplit">
+                                        <i class="fas fa-expand-arrows-alt"></i>
+                                        Split Pair
+                                    </button>
+                                    <button class="btn btn-warning" id="declareBlackjack">
+                                        <i class="fas fa-crown"></i>
+                                        Blackjack (3:2)
+                                    </button>
+                                </div>
+                                <div class="backup-bet-info" id="backupBetInfo" style="display: none;">
+                                    <p><strong>Required Backup:</strong> $<span id="requiredBackup">0</span></p>
+                                    <p><strong>Available Balance:</strong> $<span id="availableBalance">0</span></p>
+                                    <div class="backup-warning" id="backupWarning" style="display: none;">
+                                        <i class="fas fa-exclamation-triangle"></i>
+                                        <span>Insufficient balance for backup bets!</span>
+                                    </div>
+                                </div>
+
+                                <!-- Double After Split Options -->
+                                <div class="split-das-options" id="splitDasOptions" style="display: none;">
+                                    <h4>Split Pairs - Double After Split</h4>
+                                    <p><strong>Current Bet:</strong> $<span id="currentSplitBet">0</span></p>
+                                    <div class="pair-controls">
+                                        <div class="pair-section">
+                                            <h5>Pair 1</h5>
+                                            <div class="pair-buttons">
+                                                <button class="btn btn-info" id="doublePair1">
+                                                    <i class="fas fa-hand-paper"></i>
+                                                    Double
+                                                </button>
+                                                <button class="btn btn-secondary" id="hitStandPair1">
+                                                    <i class="fas fa-hand-point-up"></i>
+                                                    Hit/Stand
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div class="pair-section">
+                                            <h5>Pair 2</h5>
+                                            <div class="pair-buttons">
+                                                <button class="btn btn-info" id="doublePair2">
+                                                    <i class="fas fa-hand-paper"></i>
+                                                    Double
+                                                </button>
+                                                <button class="btn btn-secondary" id="hitStandPair2">
+                                                    <i class="fas fa-hand-point-up"></i>
+                                                    Hit/Stand
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="split-actions">
+                                        <button class="btn btn-primary" id="confirmSplitAction">
+                                            <i class="fas fa-check"></i>
+                                            Confirm Actions
+                                        </button>
+                                        <button class="btn btn-secondary" id="cancelSplitAction">
+                                            <i class="fas fa-times"></i>
+                                            Cancel
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="blackjack-outcome" id="blackjackOutcome" style="display: none;">
+                                <h4>Final Outcome</h4>
+                                <div class="outcome-info">
+                                    <p><strong>Total Bet:</strong> $<span id="totalBetAmount">0</span></p>
+                                    <p><strong>Expected Profit:</strong> $<span id="expectedProfit">0</span></p>
+                                </div>
+                                <div class="blackjack-result-buttons">
+                                    <button class="btn btn-success btn-large" id="blackjackWin">
+                                        <i class="fas fa-check-circle"></i>
+                                        Win
+                                    </button>
+                                    <button class="btn btn-danger btn-large" id="blackjackLoss">
+                                        <i class="fas fa-times-circle"></i>
+                                        Loss
+                                    </button>
+                                    <button class="btn btn-secondary" id="blackjackCancel">
+                                        <i class="fas fa-undo"></i>
+                                        Cancel Action
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                         
                         <!-- Copy to Clipboard Option -->
