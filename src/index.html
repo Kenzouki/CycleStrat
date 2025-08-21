@@ -342,6 +342,60 @@
                                         </button>
                                     </div>
                                 </div>
+
+                                <!-- Split Outcome Selection -->
+                                <div class="split-outcome-selection" id="splitOutcomeSelection" style="display: none;">
+                                    <h4>Split Pairs Outcome</h4>
+                                    <p><strong>Total Bet:</strong> $<span id="splitTotalBetAmount">0</span></p>
+                                    <div class="split-outcome-controls">
+                                        <div class="pair-outcome-section">
+                                            <h5>Pair 1 Outcome</h5>
+                                            <div class="pair-outcome-buttons">
+                                                <button class="btn btn-success" id="pair1Win">
+                                                    <i class="fas fa-check-circle"></i>
+                                                    Win
+                                                </button>
+                                                <button class="btn btn-danger" id="pair1Loss">
+                                                    <i class="fas fa-times-circle"></i>
+                                                    Loss
+                                                </button>
+                                                <button class="btn btn-warning" id="pair1Push">
+                                                    <i class="fas fa-minus-circle"></i>
+                                                    Push
+                                                </button>
+                                            </div>
+                                            <p class="pair-status" id="pair1Status">Not selected</p>
+                                        </div>
+                                        <div class="pair-outcome-section">
+                                            <h5>Pair 2 Outcome</h5>
+                                            <div class="pair-outcome-buttons">
+                                                <button class="btn btn-success" id="pair2Win">
+                                                    <i class="fas fa-check-circle"></i>
+                                                    Win
+                                                </button>
+                                                <button class="btn btn-danger" id="pair2Loss">
+                                                    <i class="fas fa-times-circle"></i>
+                                                    Loss
+                                                </button>
+                                                <button class="btn btn-warning" id="pair2Push">
+                                                    <i class="fas fa-minus-circle"></i>
+                                                    Push
+                                                </button>
+                                            </div>
+                                            <p class="pair-status" id="pair2Status">Not selected</p>
+                                        </div>
+                                    </div>
+                                    <div class="split-outcome-actions">
+                                        <button class="btn btn-primary" id="confirmSplitOutcome" disabled>
+                                            <i class="fas fa-check"></i>
+                                            Confirm Outcome
+                                        </button>
+                                        <button class="btn btn-secondary" id="cancelSplitOutcome">
+                                            <i class="fas fa-times"></i>
+                                            Cancel
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
                             
                             <div class="blackjack-outcome" id="blackjackOutcome" style="display: none;">

@@ -112,6 +112,10 @@ class LabouchereApp {
   // Split DAS state tracking
   private splitPair1Action: 'hit' | 'double' = 'hit';
   private splitPair2Action: 'hit' | 'double' = 'hit';
+  
+  // Split outcome state tracking
+  private pair1Outcome: 'win' | 'loss' | 'push' | null = null;
+  private pair2Outcome: 'win' | 'loss' | 'push' | null = null;
 
   constructor() {
     this.authManager = new AuthManager();
@@ -190,7 +194,10 @@ class LabouchereApp {
       'blackjackOutcome', 'totalBetAmount', 'expectedProfit', 'blackjackWin', 'blackjackLoss', 'blackjackCancel',
       // Split DAS elements
       'splitDasOptions', 'currentSplitBet', 'doublePair1', 'hitStandPair1', 'doublePair2', 'hitStandPair2',
-      'confirmSplitAction', 'cancelSplitAction'
+      'confirmSplitAction', 'cancelSplitAction',
+      // Split outcome elements
+      'splitOutcomeSelection', 'splitTotalBetAmount', 'pair1Win', 'pair1Loss', 'pair1Push', 'pair1Status',
+      'pair2Win', 'pair2Loss', 'pair2Push', 'pair2Status', 'confirmSplitOutcome', 'cancelSplitOutcome'
     ];
 
     elementIds.forEach(id => {
@@ -253,6 +260,16 @@ class LabouchereApp {
     this.elements.hitStandPair2?.addEventListener('click', () => this.togglePairAction('pair2', 'hit'));
     this.elements.confirmSplitAction?.addEventListener('click', () => this.confirmSplitDasAction());
     this.elements.cancelSplitAction?.addEventListener('click', () => this.cancelSplitDasAction());
+
+    // Split outcome actions
+    this.elements.pair1Win?.addEventListener('click', () => this.setPairOutcome('pair1', 'win'));
+    this.elements.pair1Loss?.addEventListener('click', () => this.setPairOutcome('pair1', 'loss'));
+    this.elements.pair1Push?.addEventListener('click', () => this.setPairOutcome('pair1', 'push'));
+    this.elements.pair2Win?.addEventListener('click', () => this.setPairOutcome('pair2', 'win'));
+    this.elements.pair2Loss?.addEventListener('click', () => this.setPairOutcome('pair2', 'loss'));
+    this.elements.pair2Push?.addEventListener('click', () => this.setPairOutcome('pair2', 'push'));
+    this.elements.confirmSplitOutcome?.addEventListener('click', () => this.processSplitOutcome());
+    this.elements.cancelSplitOutcome?.addEventListener('click', () => this.cancelSplitOutcome());
 
     // History actions
     this.elements.clearHistory?.addEventListener('click', () => this.clearHistory());
@@ -1593,6 +1610,9 @@ class LabouchereApp {
   private calculateDesiredProfit(): number {
     if (!this.currentSession) return 0;
     
+    // Ensure we're using the correct current cycle
+    this.ensureCurrentCycleIsValid();
+    
     const sequence = this.currentSession.data.sequence;
     const minimumBet = this.currentSession.metadata.minimumBet;
 
@@ -1600,6 +1620,35 @@ class LabouchereApp {
     if (sequence.length === 1) return this.ensureMinimumBet(sequence[0], minimumBet);
 
     return this.ensureMinimumBet(sequence[0] + sequence[sequence.length - 1], minimumBet);
+  }
+
+  private ensureCurrentCycleIsValid(): void {
+    if (!this.currentSession) return;
+    
+    const data = this.currentSession.data;
+    const metadata = this.currentSession.metadata;
+    
+    // If current cycle's sequence is empty, advance to next non-empty cycle
+    while (data.currentCycle <= metadata.numberOfCycles && 
+           data.sequence.length === 0) {
+      
+      // Look for next non-empty cycle
+      let nextCycleFound = false;
+      for (let i = data.currentCycle; i <= metadata.numberOfCycles; i++) {
+        const cycleIndex = i - 1;
+        if (data.allCycleSequences[cycleIndex] && data.allCycleSequences[cycleIndex].length > 0) {
+          data.currentCycle = i;
+          data.sequence = [...data.allCycleSequences[cycleIndex]];
+          nextCycleFound = true;
+          break;
+        }
+      }
+      
+      // If no non-empty cycle found, break to avoid infinite loop
+      if (!nextCycleFound) {
+        break;
+      }
+    }
   }
 
   private calculateBetSize(): number {
@@ -1969,6 +2018,9 @@ class LabouchereApp {
 
   // UI Update Methods
   private updateAllDisplays(): void {
+    // Ensure current cycle is valid before updating displays
+    this.ensureCurrentCycleIsValid();
+    
     this.updateStatusDisplay();
     this.updateBettingDisplay();
     this.updateSequenceDisplay();
@@ -2143,10 +2195,20 @@ class LabouchereApp {
 
     this.currentSession.data.allCycleSequences.forEach((cycleSequence, index) => {
       const cycleNumber = index + 1;
-      const isCurrent = cycleNumber === this.currentSession!.data.currentCycle && this.isSessionActive;
+      
+      // A cycle is completed if:
+      // 1. It's before the current cycle, OR
+      // 2. Its sequence is empty AND it's not the current cycle
       const isCompleted = cycleNumber < this.currentSession!.data.currentCycle || 
-                          (cycleSequence.length === 0 && !this.isSessionActive);
-      const isPending = cycleNumber > this.currentSession!.data.currentCycle;
+                          (cycleSequence.length === 0 && cycleNumber !== this.currentSession!.data.currentCycle);
+      
+      // A cycle is current if it's the current cycle AND has a non-empty sequence
+      const isCurrent = cycleNumber === this.currentSession!.data.currentCycle && 
+                        cycleSequence.length > 0 && this.isSessionActive;
+      
+      // A cycle is pending if it's after the current cycle OR (it's current cycle but empty)
+      const isPending = cycleNumber > this.currentSession!.data.currentCycle ||
+                        (cycleNumber === this.currentSession!.data.currentCycle && cycleSequence.length === 0);
 
       const cycleDiv = document.createElement('div');
       cycleDiv.className = `sequence-cycle ${isCurrent ? 'current' : isCompleted ? 'completed' : 'pending'}`;
@@ -4840,8 +4902,17 @@ class LabouchereApp {
     if (isSplit && isDasEnabled) {
       // Show DAS options instead of immediate outcome
       this.showSplitDasOptions();
+    } else if (isSplit) {
+      // Split without DAS - show split outcome selection directly
+      if (blackjackOutcome) {
+        blackjackOutcome.style.display = 'none';
+      }
+      if (splitDasOptions) {
+        splitDasOptions.style.display = 'none';
+      }
+      this.showSplitOutcomeSelection();
     } else {
-      // Show regular outcome
+      // Show regular outcome for non-split actions
       if (blackjackOutcome && totalBetAmount && expectedProfit) {
         totalBetAmount.textContent = this.formatCurrency(this.blackjackActualBetSize);
         
@@ -4876,8 +4947,8 @@ class LabouchereApp {
     
     if (isWin) {
       if (this.blackjackCurrentAction === 'blackjack') {
-        // Blackjack pays 3:2 (original bet + 1.5x bonus)
-        actualPayout = this.blackjackOriginalBetSize + (this.blackjackOriginalBetSize * 1.5);
+        // Blackjack pays 3:2 - profit is 1.5x the original bet
+        actualPayout = this.blackjackOriginalBetSize * 1.5;
         actualBetSize = this.blackjackOriginalBetSize; // Only original bet is at risk for blackjack
       } else {
         // Regular win pays 1:1 on actual bet size
@@ -4896,6 +4967,7 @@ class LabouchereApp {
       this.processStandardBlackjackBet(isWin, desiredProfit, actualPayout, betSizeForHistory, actualBetSize);
     }
     
+    // Cancel blackjack action after processing is complete
     this.cancelBlackjackAction();
   }
 
@@ -4903,38 +4975,48 @@ class LabouchereApp {
     if (!this.currentSession) return;
     
     const data = this.currentSession.data;
-    const sequence = data.sequence;
     const totalLoss = this.blackjackActualBetSize;
+    
+    // Get the current cycle sequence directly from allCycleSequences
+    const currentCycleIndex = data.currentCycle - 1;
+    const currentCycleSequence = data.allCycleSequences[currentCycleIndex];
     
     // Add separate entries for each bet component by splitting the total loss
     if (this.blackjackCurrentAction === 'double') {
       // For double down, split the total loss (2x original bet) into two equal parts
       const splitAmount = totalLoss / 2;
-      sequence.push(splitAmount, splitAmount);
+      currentCycleSequence.push(splitAmount, splitAmount);
     } else if (this.blackjackCurrentAction === 'split') {
       // Add entries based on how many hands were actually played
       // For simplicity, we'll add the equivalent of the total bet as separate entries
       const betSize = this.blackjackOriginalBetSize;
       const numEntries = Math.ceil(totalLoss / betSize);
       for (let i = 0; i < numEntries; i++) {
-        sequence.push(i < numEntries - 1 ? betSize : totalLoss - (betSize * (numEntries - 1)));
+        currentCycleSequence.push(i < numEntries - 1 ? betSize : totalLoss - (betSize * (numEntries - 1)));
       }
     }
     
-    // Update the sequence in allCycleSequences to keep them in sync
-    data.allCycleSequences[data.currentCycle - 1] = [...sequence];
-    
     // Auto-sort sequence if enabled
-    if (this.shouldAutoSort() && sequence.length > 0) {
-      sequence.sort((a, b) => a - b);
-      data.allCycleSequences[data.currentCycle - 1] = [...sequence];
+    if (this.shouldAutoSort() && currentCycleSequence.length > 0) {
+      currentCycleSequence.sort((a, b) => a - b);
     }
     
-    // Update balance
-    data.balance -= this.blackjackActualBetSize;
+    // Update the data.sequence reference to match the updated current cycle
+    data.sequence = [...currentCycleSequence];
     
-    // Add to history
-    this.addToHistory(false, this.calculateDesiredProfit(), this.blackjackActualBetSize);
+    // Update balance and profit tracking
+    data.balance -= this.blackjackActualBetSize;
+    data.totalProfit -= this.blackjackActualBetSize;
+    data.cycleProfit -= this.blackjackActualBetSize;
+    
+    // Update consecutive loss statistics (same as standard blackjack path)
+    this.consecutiveLosses++;
+    this.consecutiveWins = 0;
+    this.currentStreak = Math.min(this.currentStreak - 1, -1);
+    data.maxConsecutiveLosses = Math.max(data.maxConsecutiveLosses, this.consecutiveLosses);
+    
+    // Add to history with blackjack-specific information
+    this.addBlackjackToHistory(false, this.calculateDesiredProfit(), this.blackjackOriginalBetSize, this.blackjackActualBetSize);
     
     this.updateAllDisplays();
   }
@@ -4957,7 +5039,7 @@ class LabouchereApp {
       // Sync the sequence changes to allCycleSequences before excess profit distribution
       data.allCycleSequences[data.currentCycle - 1] = [...sequence];
       
-      // Update balance - actualPayout is the winnings amount
+      // Update balance - actualPayout is the winnings amount, no need to subtract betSizeForHistory
       data.balance += actualPayout;
       data.totalProfit += actualPayout;
       data.cycleProfit += actualPayout;
@@ -5057,10 +5139,25 @@ class LabouchereApp {
     this.blackjackActualBetSize = 0;
     this.blackjackOriginalBetSize = 0;
     
-    // Hide outcome selection
+    // Reset split outcomes
+    this.pair1Outcome = null;
+    this.pair2Outcome = null;
+    
+    // Hide outcome selections
     const blackjackOutcome = this.elements.blackjackOutcome as HTMLElement;
+    const splitOutcomeSelection = this.elements.splitOutcomeSelection as HTMLElement;
+    const splitDasOptions = this.elements.splitDasOptions as HTMLElement;
+    
     if (blackjackOutcome) {
       blackjackOutcome.style.display = 'none';
+    }
+    
+    if (splitOutcomeSelection) {
+      splitOutcomeSelection.style.display = 'none';
+    }
+    
+    if (splitDasOptions) {
+      splitDasOptions.style.display = 'none';
     }
     
     // Hide backup info
@@ -5113,6 +5210,11 @@ class LabouchereApp {
       // Move to next cycle if current one is fully cleared
       targetCycleIndex++;
     }
+    
+    // Remove any 0.0 values that may have been created by rounding
+    data.allCycleSequences = data.allCycleSequences.map(sequence => 
+      sequence.filter(value => value > 0)
+    );
     
     // Update the current sequence reference to match the modified current cycle
     if (data.currentCycle > 0 && data.currentCycle <= data.allCycleSequences.length) {
@@ -5198,21 +5300,20 @@ class LabouchereApp {
   }
 
   private confirmSplitDasAction(): void {
-    // Hide DAS options and show outcome
+    // Hide DAS options and show split outcome selection
     const splitDasOptions = this.elements.splitDasOptions as HTMLElement;
     const blackjackOutcome = this.elements.blackjackOutcome as HTMLElement;
-    const totalBetAmount = this.elements.totalBetAmount as HTMLElement;
-    const expectedProfit = this.elements.expectedProfit as HTMLElement;
     
     if (splitDasOptions) {
       splitDasOptions.style.display = 'none';
     }
     
-    if (blackjackOutcome && totalBetAmount && expectedProfit) {
-      totalBetAmount.textContent = this.formatCurrency(this.blackjackActualBetSize);
-      expectedProfit.textContent = this.formatCurrency(this.blackjackActualBetSize); // 1:1 payout
-      blackjackOutcome.style.display = 'block';
+    // Hide regular outcome and show split outcome selection
+    if (blackjackOutcome) {
+      blackjackOutcome.style.display = 'none';
     }
+    
+    this.showSplitOutcomeSelection();
   }
 
   private cancelSplitDasAction(): void {
@@ -5221,6 +5322,233 @@ class LabouchereApp {
     this.splitPair2Action = 'hit';
     this.blackjackActualBetSize = this.blackjackOriginalBetSize * 2; // Back to basic split
     
+    this.cancelBlackjackAction();
+  }
+
+  private setPairOutcome(pair: 'pair1' | 'pair2', outcome: 'win' | 'loss' | 'push'): void {
+    if (pair === 'pair1') {
+      this.pair1Outcome = outcome;
+    } else {
+      this.pair2Outcome = outcome;
+    }
+    this.updatePairOutcomeUI();
+  }
+
+  private updatePairOutcomeUI(): void {
+    const pair1Status = this.elements.pair1Status as HTMLElement;
+    const pair2Status = this.elements.pair2Status as HTMLElement;
+    const confirmButton = this.elements.confirmSplitOutcome as HTMLButtonElement;
+
+    // Update pair 1 buttons and status
+    ['pair1Win', 'pair1Loss', 'pair1Push'].forEach(buttonId => {
+      const button = this.elements[buttonId] as HTMLButtonElement;
+      if (button) {
+        button.classList.remove('btn-success', 'btn-danger', 'btn-warning');
+        if ((buttonId === 'pair1Win' && this.pair1Outcome === 'win') ||
+            (buttonId === 'pair1Loss' && this.pair1Outcome === 'loss') ||
+            (buttonId === 'pair1Push' && this.pair1Outcome === 'push')) {
+          button.classList.add(buttonId.includes('Win') ? 'btn-success' : 
+                               buttonId.includes('Loss') ? 'btn-danger' : 'btn-warning');
+        } else {
+          button.classList.add(buttonId.includes('Win') ? 'btn-outline-success' : 
+                               buttonId.includes('Loss') ? 'btn-outline-danger' : 'btn-outline-warning');
+        }
+      }
+    });
+
+    // Update pair 2 buttons and status
+    ['pair2Win', 'pair2Loss', 'pair2Push'].forEach(buttonId => {
+      const button = this.elements[buttonId] as HTMLButtonElement;
+      if (button) {
+        button.classList.remove('btn-success', 'btn-danger', 'btn-warning');
+        if ((buttonId === 'pair2Win' && this.pair2Outcome === 'win') ||
+            (buttonId === 'pair2Loss' && this.pair2Outcome === 'loss') ||
+            (buttonId === 'pair2Push' && this.pair2Outcome === 'push')) {
+          button.classList.add(buttonId.includes('Win') ? 'btn-success' : 
+                               buttonId.includes('Loss') ? 'btn-danger' : 'btn-warning');
+        } else {
+          button.classList.add(buttonId.includes('Win') ? 'btn-outline-success' : 
+                               buttonId.includes('Loss') ? 'btn-outline-danger' : 'btn-outline-warning');
+        }
+      }
+    });
+
+    // Update status text
+    if (pair1Status) {
+      pair1Status.textContent = this.pair1Outcome ? 
+        this.pair1Outcome.charAt(0).toUpperCase() + this.pair1Outcome.slice(1) : 
+        'Not selected';
+      pair1Status.className = this.pair1Outcome ? 'pair-status selected' : 'pair-status';
+    }
+
+    if (pair2Status) {
+      pair2Status.textContent = this.pair2Outcome ? 
+        this.pair2Outcome.charAt(0).toUpperCase() + this.pair2Outcome.slice(1) : 
+        'Not selected';
+      pair2Status.className = this.pair2Outcome ? 'pair-status selected' : 'pair-status';
+    }
+
+    // Enable confirm button only if both outcomes are selected
+    if (confirmButton) {
+      confirmButton.disabled = !(this.pair1Outcome && this.pair2Outcome);
+    }
+  }
+
+  private showSplitOutcomeSelection(): void {
+    const splitOutcomeSelection = this.elements.splitOutcomeSelection as HTMLElement;
+    const splitTotalBetAmount = this.elements.splitTotalBetAmount as HTMLElement;
+    
+    if (splitOutcomeSelection && splitTotalBetAmount) {
+      splitTotalBetAmount.textContent = this.formatCurrency(this.blackjackActualBetSize);
+      splitOutcomeSelection.style.display = 'block';
+      
+      // Reset outcomes
+      this.pair1Outcome = null;
+      this.pair2Outcome = null;
+      this.updatePairOutcomeUI();
+    }
+  }
+
+  private processSplitOutcome(): void {
+    if (!this.currentSession || !this.pair1Outcome || !this.pair2Outcome) return;
+
+    const desiredProfit = this.calculateDesiredProfit();
+    const baseBetSize = this.blackjackOriginalBetSize;
+    
+    // Calculate individual bet sizes including any doubles
+    let pair1BetSize = baseBetSize;
+    let pair2BetSize = baseBetSize;
+    
+    if (this.splitPair1Action === 'double') {
+      pair1BetSize *= 2;
+    }
+    if (this.splitPair2Action === 'double') {
+      pair2BetSize *= 2;
+    }
+
+    // Calculate total payout
+    let totalPayout = 0;
+    let totalBetAtRisk = 0;
+
+    // Process pair 1
+    if (this.pair1Outcome === 'win') {
+      totalPayout += pair1BetSize; // 1:1 payout
+    } else if (this.pair1Outcome === 'loss') {
+      totalBetAtRisk += pair1BetSize;
+    }
+    // Push means no gain/loss for this pair
+
+    // Process pair 2
+    if (this.pair2Outcome === 'win') {
+      totalPayout += pair2BetSize; // 1:1 payout
+    } else if (this.pair2Outcome === 'loss') {
+      totalBetAtRisk += pair2BetSize;
+    }
+    // Push means no gain/loss for this pair
+
+    // Determine overall outcome
+    const netResult = totalPayout - totalBetAtRisk;
+    
+    if (netResult > 0) {
+      // Net win
+      this.processStandardBlackjackBet(true, desiredProfit, totalPayout, baseBetSize, this.blackjackActualBetSize);
+    } else if (netResult < 0) {
+      // Net loss - handle split losses if enabled
+      if (this.currentSession.metadata.blackjackSplitLossesOption) {
+        this.processSplitLossesForIndividualOutcome(totalBetAtRisk);
+      } else {
+        this.processStandardBlackjackBet(false, desiredProfit, 0, baseBetSize, totalBetAtRisk);
+      }
+    } else {
+      // Net push - no change to sequence
+      this.processStandardBlackjackBet(true, desiredProfit, 0, baseBetSize, 0);
+    }
+
+    this.cancelBlackjackAction();
+  }
+
+  private processSplitLossesForIndividualOutcome(totalLoss: number): void {
+    if (!this.currentSession) return;
+    
+    const data = this.currentSession.data;
+    
+    // Get the current cycle sequence directly from allCycleSequences
+    const currentCycleIndex = data.currentCycle - 1;
+    const currentCycleSequence = data.allCycleSequences[currentCycleIndex];
+    
+    // Add separate entries based on individual pair losses
+    let lossEntries = [];
+    
+    if (this.pair1Outcome === 'loss') {
+      let pair1Loss = this.blackjackOriginalBetSize;
+      if (this.splitPair1Action === 'double') {
+        pair1Loss *= 2;
+      }
+      lossEntries.push(pair1Loss);
+    }
+    
+    if (this.pair2Outcome === 'loss') {
+      let pair2Loss = this.blackjackOriginalBetSize;
+      if (this.splitPair2Action === 'double') {
+        pair2Loss *= 2;
+      }
+      lossEntries.push(pair2Loss);
+    }
+
+    // Add the loss entries to the current cycle sequence
+    lossEntries.forEach(loss => currentCycleSequence.push(loss));
+    
+    // Auto-sort sequence if enabled
+    if (this.shouldAutoSort() && currentCycleSequence.length > 0) {
+      currentCycleSequence.sort((a, b) => a - b);
+    }
+    
+    // Update the data.sequence reference to match the updated current cycle
+    data.sequence = [...currentCycleSequence];
+    
+    // Update balance and profit tracking
+    data.balance -= totalLoss;
+    data.totalProfit -= totalLoss;
+    data.cycleProfit -= totalLoss;
+    
+    // Update consecutive loss statistics
+    this.consecutiveLosses++;
+    this.consecutiveWins = 0;
+    this.currentStreak = this.consecutiveLosses > 0 ? -this.consecutiveLosses : 0;
+    
+    // Update max consecutive losses if needed
+    if (this.consecutiveLosses > this.maxConsecutiveLosses) {
+      this.maxConsecutiveLosses = this.consecutiveLosses;
+      data.maxConsecutiveLosses = this.maxConsecutiveLosses;
+    }
+
+    // Add to history (update balance after balance calculation)
+    const historyEntry: HistoryEntry = {
+      betNumber: this.currentSession.history.length + 1,
+      outcome: 'Loss',
+      desiredProfit: this.calculateDesiredProfit(),
+      betSize: this.blackjackOriginalBetSize,
+      balance: data.balance,
+      sequenceAfter: data.sequence.join(','),
+      timestamp: new Date(),
+      blackjackAction: 'split',
+      actualBetSize: totalLoss
+    };
+
+    this.currentSession.history.push(historyEntry);
+    this.updateAllDisplays();
+  }
+
+  private cancelSplitOutcome(): void {
+    // Reset outcomes and hide selection
+    this.pair1Outcome = null;
+    this.pair2Outcome = null;
+    
+    const splitOutcomeSelection = this.elements.splitOutcomeSelection as HTMLElement;
+    if (splitOutcomeSelection) {
+      splitOutcomeSelection.style.display = 'none';
+    }
+
     this.cancelBlackjackAction();
   }
 }

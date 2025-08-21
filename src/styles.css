@@ -1026,6 +1026,95 @@ body {
   min-width: 120px;
 }
 
+/* Split Outcome Selection */
+.split-outcome-selection {
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 1rem;
+  margin: 1rem 0;
+}
+
+.split-outcome-selection h4 {
+  text-align: center;
+  margin: 0 0 1rem 0;
+  color: var(--primary-color);
+}
+
+.split-outcome-controls {
+  display: flex;
+  gap: 1rem;
+  justify-content: space-around;
+  margin: 1rem 0;
+}
+
+.pair-outcome-section {
+  flex: 1;
+  text-align: center;
+  background: var(--bg-light);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  padding: 1rem;
+}
+
+.pair-outcome-section h5 {
+  margin: 0 0 0.75rem 0;
+  color: var(--text-color);
+  font-size: var(--font-size-sm);
+}
+
+.pair-outcome-buttons {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: center;
+  margin-bottom: 0.75rem;
+}
+
+.pair-outcome-buttons .btn {
+  padding: 0.5rem 0.75rem;
+  font-size: var(--font-size-xs);
+  min-width: 70px;
+}
+
+.pair-status {
+  font-size: var(--font-size-xs);
+  margin: 0;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.pair-status.selected {
+  color: var(--primary-color);
+}
+
+.split-outcome-actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  margin-top: 1rem;
+  border-top: 1px solid var(--border-color);
+  padding-top: 1rem;
+}
+
+/* Outline button styles for split outcomes */
+.pair-outcome-buttons .btn-outline-success {
+  background: transparent;
+  border: 1px solid var(--success-color);
+  color: var(--success-color);
+}
+
+.pair-outcome-buttons .btn-outline-danger {
+  background: transparent;
+  border: 1px solid var(--danger-color);
+  color: var(--danger-color);
+}
+
+.pair-outcome-buttons .btn-outline-warning {
+  background: transparent;
+  border: 1px solid var(--warning-color);
+  color: var(--warning-color);
+}
+
 /* Push button styling */
 .betting-actions .btn-secondary {
   background: var(--secondary-color);
